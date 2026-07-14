@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>ポモログ</title>
+<link rel="icon" href="data:,">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #0F1A33; overscroll-behavior: none; }
+  #root { min-height: 100vh; }
+  #fallback-msg { display: none; color: #FCEEDD; font-family: sans-serif; padding: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="fallback-msg">
+  読み込みに失敗しました。電波の良い場所で、ページを再読み込みしてみてください。
+</div>
+<script>
+  // If React never mounts into #root within a few seconds (e.g. a CDN script
+  // failed to load), show a visible message instead of a silent blank/dark screen.
+  setTimeout(function () {
+    var root = document.getElementById("root");
+    if (root && root.children.length === 0) {
+      document.getElementById("fallback-msg").style.display = "block";
+    }
+  }, 8000);
+</script>
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useMemo } = React;
+
+// ---- Storage shim: mirrors the Claude-artifact window.storage API using localStorage ----
+window.storage = {
+  get: async (key) => {
+    const v = localStorage.getItem(key);
+    return v !== null ? { key, value: v } : null;
+  },
+  set: async (key, value) => {
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+  delete: async (key) => {
+    localStorage.removeItem(key);
+    return { key, deleted: true };
+  },
+  list: async (prefix) => {
+    const keys = Object.keys(localStorage).filter((k) => !prefix || k.startsWith(prefix));
+    return { keys };
+  },
+};
+
+// ---- Minimal inline-SVG icon set (replaces lucide-react for standalone use) ----
+function ChevronLeft({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+function ChevronRight({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+function ChevronDown({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+function ChevronUp({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  );
+}
+function Plus({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+function Trash2({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+    </svg>
+  );
+}
+function Sparkles({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" />
+    </svg>
+  );
+}
+function Palette({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="8.5" cy="10" r="1.1" fill={color} stroke="none" />
+      <circle cx="12" cy="7" r="1.1" fill={color} stroke="none" />
+      <circle cx="15.5" cy="10" r="1.1" fill={color} stroke="none" />
+      <circle cx="10" cy="14.5" r="1.1" fill={color} stroke="none" />
+    </svg>
+  );
+}
+function CalendarDays({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+    </svg>
+  );
+}
+function ListTree({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="12" x2="14" y2="12" />
+      <line x1="4" y1="18" x2="10" y2="18" />
+    </svg>
+  );
+}
+function BarChart2({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="4" y1="20" x2="4" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="20" y1="20" x2="20" y2="14" />
+    </svg>
+  );
+}
+function Settings({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  );
+}
+function Clock({ size = 20, color = "currentColor", className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 15" />
+    </svg>
+  );
+}
+
+// ---- Minimal bar chart (replaces recharts for standalone use) ----
+function SimpleBarChart({ data, valueKey, labelKey, colorKey, defaultColor, height = 110, tickEvery = 1, formatLabel }) {
+  const values = data.map((d) => d[valueKey] || 0);
+  const max = Math.max(1, ...values);
+  const barAreaHeight = height - 34;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", height, gap: 3 }}>
+      {data.map((d, i) => {
+        const val = d[valueKey] || 0;
+        const barColor = (colorKey && d[colorKey]) || defaultColor || "#F4A259";
+        const barH = val > 0 ? Math.max(4, Math.round((val / max) * barAreaHeight)) : 0;
+        const showLabel = tickEvery <= 1 || i % tickEvery === 0;
+        const rawLabel = d[labelKey];
+        const text = formatLabel ? formatLabel(rawLabel) : rawLabel;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              height: "100%",
+              minWidth: 0,
+            }}
+          >
+            <div style={{ fontSize: 10, color: "#FCEEDD", height: 14, lineHeight: "14px" }}>{val > 0 ? val : ""}</div>
+            <div style={{ width: "70%", maxWidth: 24, height: barH, background: barColor, borderRadius: "3px 3px 0 0" }} />
+            <div
+              style={{
+                fontSize: 9,
+                color: "#93A0C2",
+                height: 16,
+                lineHeight: "16px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+              }}
+            >
+              {showLabel && text ? text : ""}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+const COLORS = {
+  bg: "#0F1A33",
+  card: "#1B2A4D",
+  cardBorder: "#2C3E66",
+  cream: "#FCEEDD",
+  creamDim: "#93A0C2",
+  amber: "#F4A259",
+  lavender: "#A594E0",
+  teal: "#5FAD8D",
+  sunday: "#E08D8D",
+  saturday: "#7FB3E0",
+};
+
+const MON_PALETTE = ["#F4A259", "#A594E0", "#5FAD8D", "#E08DAA", "#7FB3E0", "#D9C15F"];
+
+// Species implemented in Pokémon Sleep, each mapped to its fixed main skill.
+// Source: https://game8.jp/pokemonsleep/541807 (登場ポケモン一覧)
+const SPECIES_SKILL_MAP = {
+  フシギダネ: "食材ゲットS", フシギソウ: "食材ゲットS", フシギバナ: "食材ゲットS",
+  ヒトカゲ: "食材ゲットS", リザード: "食材ゲットS", リザードン: "食材ゲットS",
+  ゼニガメ: "食材ゲットS", カメール: "食材ゲットS", カメックス: "食材ゲットS",
+  キャタピー: "食材ゲットS", トランセル: "食材ゲットS", バタフリー: "食材ゲットS",
+  コラッタ: "げんきチャージS", ラッタ: "げんきチャージS",
+  アーボ: "げんきチャージS", アーボック: "げんきチャージS",
+  ピカチュウ: "エナジーチャージS", "ピカチュウ (ハロウィン)": "エナジーチャージS",
+  "ピカチュウ (ホリデー)": "ゆめのかけらゲットS", ライチュウ: "エナジーチャージS",
+  サンド: "食材セレクトS", サンドパン: "食材セレクトS",
+  ピッピ: "ゆびをふる", ピクシー: "ゆびをふる",
+  ロコン: "げんきエールS", "ロコン (アローラ)": "おてつだいサポートS",
+  キュウコン: "げんきエールS", "キュウコン (アローラ)": "おてつだいサポートS",
+  プリン: "げんきオールS", プクリン: "げんきオールS",
+  ディグダ: "エナジーチャージS", ダグトリオ: "エナジーチャージS",
+  ニャース: "ゆめのかけらゲットS", ペルシアン: "ゆめのかけらゲットS",
+  コダック: "エナジーチャージS", ゴルダック: "エナジーチャージS",
+  マンキー: "エナジーチャージS", オコリザル: "エナジーチャージS",
+  ガーディ: "おてつだいサポートS", ウインディ: "おてつだいサポートS",
+  マダツボミ: "げんきチャージS", ウツドン: "げんきチャージS", ウツボット: "げんきチャージS",
+  イシツブテ: "エナジーチャージS", ゴローン: "エナジーチャージS", ゴローニャ: "エナジーチャージS",
+  ヤドン: "げんきエールS", ヤドラン: "げんきエールS",
+  コイル: "料理パワーアップS", レアコイル: "料理パワーアップS",
+  カモネギ: "エナジーチャージS",
+  ドードー: "げんきチャージS", ドードリオ: "げんきチャージS",
+  ゴース: "エナジーチャージS", ゴースト: "エナジーチャージS", ゲンガー: "エナジーチャージS",
+  イワーク: "食材ゲットS",
+  カラカラ: "げんきチャージS", ガラガラ: "げんきチャージS",
+  ラッキー: "げんきオールS", ガルーラ: "食材ゲットS",
+  バリヤード: "ものまね (スキルコピー)", カイロス: "エナジーチャージM",
+  メタモン: "へんしん (スキルコピー)",
+  イーブイ: "食材ゲットS", "イーブイ (ホリデー)": "ゆめのかけらゲットS", "イーブイ (ハロウィン)": "食材ゲットS",
+  シャワーズ: "食材ゲットS", サンダース: "おてつだいサポートS", ブースター: "料理パワーアップS",
+  ミニリュウ: "げんきチャージS", ハクリュー: "げんきチャージS", カイリュー: "げんきチャージS",
+  ミュウ: "オールマイティー (ゆびをふる)",
+  チコリータ: "エナジーチャージS", ベイリーフ: "エナジーチャージS", メガニウム: "エナジーチャージS",
+  ヒノアラシ: "エナジーチャージS", マグマラシ: "エナジーチャージS", バクフーン: "エナジーチャージS",
+  ワニノコ: "エナジーチャージS", アリゲイツ: "エナジーチャージS", オーダイル: "エナジーチャージS",
+  ピチュー: "エナジーチャージS", ピィ: "ゆびをふる", ププリン: "げんきオールS",
+  トゲピー: "ゆびをふる", トゲチック: "ゆびをふる",
+  ネイティ: "食材ゲットS", ネイティオ: "食材ゲットS",
+  メリープ: "エナジーチャージM", モココ: "エナジーチャージM", デンリュウ: "エナジーチャージM",
+  ウソッキー: "エナジーチャージM",
+  ウパー: "げんきチャージS", "ウパー (パルデア)": "げんきチャージS", ヌオー: "げんきチャージS",
+  エーフィ: "エナジーチャージM", ブラッキー: "つきのひかり (げんきチャージS)",
+  ヤミカラス: "きょううん (食材セレクトS)",
+  ヤドキング: "げんきエールS", ソーナンス: "げんきエールS",
+  ハガネール: "食材ゲットS",
+  ツボツボ: "きのみジュース (げんきオールS)", ヘラクロス: "ビルドアップ (料理アシストS)",
+  ニューラ: "料理チャンスS", デリバード: "プレゼント (食材ゲットS)",
+  デルビル: "エナジーチャージM", ヘルガー: "エナジーチャージM",
+  ハピナス: "げんきオールS",
+  ライコウ: "おてつだいブースト (でんき)", エンテイ: "おてつだいブースト (ほのお)",
+  スイクン: "おてつだいブースト (みず)",
+  ヨーギラス: "げんきチャージS", サナギラス: "げんきチャージS", バンギラス: "げんきチャージS",
+  キモリ: "きのみバースト", ジュプトル: "きのみバースト", ジュカイン: "きのみバースト",
+  アチャモ: "げんきチャージS", ワカシャモ: "げんきチャージS", バシャーモ: "げんきチャージS",
+  ミズゴロウ: "料理チャンスS", ヌマクロー: "料理チャンスS", ラグラージ: "料理チャンスS",
+  ラルトス: "げんきオールS", キルリア: "げんきオールS", サーナイト: "げんきオールS",
+  ナマケロ: "食材ゲットS", ヤルキモノ: "食材ゲットS", ケッキング: "食材ゲットS",
+  ヤミラミ: "ゆめのかけらゲットS", クチート: "かいりきバサミ (食材セレクトS)",
+  ココドラ: "げんきチャージS", コドラ: "げんきチャージS", ボスゴドラ: "げんきチャージS",
+  プラスル: "プラス (食材ゲットS)",
+  ゴクリン: "ゆめのかけらゲットS", マルノーム: "ゆめのかけらゲットS",
+  マイナン: "マイナス (料理パワーアップS)",
+  ナックラー: "エナジーチャージS", ビブラーバ: "エナジーチャージS", フライゴン: "エナジーチャージS",
+  チルット: "げんきチャージS", チルタリス: "げんきチャージS",
+  カゲボウズ: "エナジーチャージS", ジュペッタ: "エナジーチャージS",
+  アブソル: "エナジーチャージM", ソーナノ: "げんきエールS",
+  タマザラシ: "食材ゲットS", "タマザラシ (ホリデー)": "料理チャンスS",
+  トドグラー: "食材ゲットS", トドゼルガ: "食材ゲットS",
+  タツベイ: "料理パワーアップS", コモルー: "料理パワーアップS", ボーマンダ: "料理パワーアップS",
+  ラティアス: "いやしのはどう (げんきエールS)", ラティオス: "りゅうせいぐん (きのみバースト)",
+  ナエトル: "げんきオールS", ハヤシガメ: "げんきオールS", ドダイトス: "げんきオールS",
+  ヒコザル: "きのみバースト", モウカザル: "きのみバースト", ゴウカザル: "きのみバースト",
+  ポッチャマ: "おてつだいサポートS", ポッタイシ: "おてつだいサポートS", エンペルト: "おてつだいサポートS",
+  コリンク: "料理パワーアップS", ルクシオ: "料理パワーアップS", レントラー: "料理パワーアップS",
+  フワンテ: "たくわえる (エナジーチャージS)", フワライド: "たくわえる (エナジーチャージS)",
+  ドンカラス: "きょううん (食材セレクトS)", ウソハチ: "エナジーチャージM",
+  マネネ: "ものまね (スキルコピー)", ピンプク: "げんきオールS",
+  ミカルゲ: "おてつだいサポートS",
+  リオル: "ゆめのかけらゲットS", ルカリオ: "ゆめのかけらゲットS",
+  グレッグル: "エナジーチャージS", ドクロッグ: "エナジーチャージS",
+  ユキカブリ: "エナジーチャージS", ユキノオー: "エナジーチャージS",
+  マニューラ: "料理チャンスS", ジバコイル: "料理パワーアップS",
+  トゲキッス: "ゆびをふる", リーフィア: "げんきエールS", グレイシア: "料理パワーアップS",
+  エルレイド: "おてつだいサポートS",
+  クレセリア: "みかづきのいのり (げんきオールS)", ダークライ: "ナイトメア (エナジーチャージM)",
+  ムシャーナ: "ゆめのかけらゲットS", ムンナ: "ゆめのかけらゲットS",
+  イシズマイ: "食材セレクトS", イワパレス: "食材セレクトS",
+  ワシボン: "きのみバースト", ウォーグル: "きのみバースト",
+  チゴラス: "料理パワーアップS", ガチゴラス: "料理パワーアップS",
+  ニンフィア: "げんきオールS", デデンネ: "料理チャンスS",
+  バケッチャ: "エナジーチャージS", パンプジン: "エナジーチャージS",
+  オンバット: "エナジーチャージM", オンバーン: "エナジーチャージM",
+  アゴジムシ: "エナジーチャージS", デンヂムシ: "エナジーチャージS", クワガノン: "エナジーチャージS",
+  アブリー: "食材セレクトS", アブリボン: "食材セレクトS",
+  ヌイコグマ: "エナジーチャージS", キテルグマ: "エナジーチャージS",
+  キュワワー: "げんきエールS", トゲデマル: "ほっぺすりすり (げんきエールS)",
+  ミミッキュ: "ばけのかわ (きのみバースト)",
+  ジジーロン: "料理チャンスS", ウッウ: "料理チャンスS",
+  エレズン: "食材ゲットS",
+  "ストリンダー (ロー)": "マイナス (料理パワーアップS)", "ストリンダー (ハイ)": "プラス (食材ゲットS)",
+  ニャオハ: "料理パワーアップS", ニャローテ: "料理パワーアップS", マスカーニャ: "料理パワーアップS",
+  ホゲータ: "げんきチャージS", アチゲータ: "げんきチャージS", ラウドボーン: "げんきチャージS",
+  クワッス: "エナジーチャージM", ウェルカモ: "エナジーチャージM", ウェーニバル: "エナジーチャージM",
+  パモ: "げんきオールS", パモット: "げんきオールS", パーモット: "げんきオールS",
+  アルクジラ: "げんきチャージS", ハルクジラ: "げんきチャージS", ドオー: "げんきチャージS",
+};
+
+const SPECIES_SUGGESTIONS = Object.keys(SPECIES_SKILL_MAP);
+
+const SKILL_SUGGESTIONS = [
+  "エナジーチャージS", "エナジーチャージM",
+  "げんきチャージS",
+  "げんきエールS", "ほっぺすりすり (げんきエールS)", "いやしのはどう (げんきエールS)",
+  "げんきオールS", "みかづきのいのり (げんきオールS)", "きのみジュース (げんきオールS)",
+  "おてつだいサポートS",
+  "おてつだいブースト (でんき)", "おてつだいブースト (ほのお)", "おてつだいブースト (みず)",
+  "食材ゲットS", "プラス (食材ゲットS)", "プレゼント (食材ゲットS)",
+  "食材セレクトS", "きょううん (食材セレクトS)", "かいりきバサミ (食材セレクトS)",
+  "料理パワーアップS", "マイナス (料理パワーアップS)",
+  "料理チャンスS",
+  "ゆめのかけらゲットS",
+  "ゆびをふる", "オールマイティー (ゆびをふる)",
+  "きのみバースト", "ばけのかわ (きのみバースト)", "りゅうせいぐん (きのみバースト)",
+  "スキルコピー", "へんしん (スキルコピー)", "ものまね (スキルコピー)",
+  "つきのひかり (げんきチャージS)",
+  "たくわえる (エナジーチャージS)", "ナイトメア (エナジーチャージM)",
+  "ビルドアップ (料理アシストS)",
+];
+const STORAGE_KEY = "pokemon-sleep-tracker:mons";
+const DAY_MS = 86400000;
+const MIN_VALID_INTERVAL_MS = 60 * 1000; // 1分未満は誤タップ等として除外
+const MAX_VALID_INTERVAL_MS = 24 * 3600 * 1000; // 24時間超は記録し忘れ(欠測)として除外
+
+// Converts hiragana characters to katakana so suggestions can match while
+// an IME is still showing hiragana, before it's converted to katakana.
+function toKatakana(str) {
+  return str.replace(/[\u3041-\u3096]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60));
+}
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function colorFor(index) {
+  return MON_PALETTE[index % MON_PALETTE.length];
+}
+
+// A pokemon's manually chosen color takes priority; otherwise falls back to the palette by index.
+function monColor(mon, index) {
+  return mon.color || colorFor(index);
+}
+
+const DAY_START_HOUR = 4;
+
+function startOfDay(d) {
+  const x = new Date(d);
+  if (x.getHours() < DAY_START_HOUR) {
+    x.setDate(x.getDate() - 1);
+  }
+  x.setHours(DAY_START_HOUR, 0, 0, 0);
+  return x;
+}
+
+function startOfWeek(d) {
+  const x = startOfDay(d);
+  const mondayOffset = (x.getDay() + 6) % 7; // 0=Mon ... 6=Sun
+  x.setDate(x.getDate() - mondayOffset);
+  return x;
+}
+
+function isSameDay(a, b) {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
+// Combine an app-day start with a "HH:MM" time string into a real timestamp,
+// accounting for the 4:00-start day boundary (times before 4:00 belong to the next calendar date).
+function composeTimestamp(dayStart, timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  const d = new Date(dayStart);
+  if (h < DAY_START_HOUR) d.setDate(d.getDate() + 1);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+}
+
+function weekdayLabel(dateObj) {
+  return ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
+}
+
+function weekdayColor(dateObj) {
+  const wd = dateObj.getDay();
+  if (wd === 0) return COLORS.sunday;
+  if (wd === 6) return COLORS.saturday;
+  return COLORS.teal;
+}
+
+function formatDuration(ms) {
+  if (ms == null) return "記録なし";
+  const totalMin = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m}分前`;
+  return `${h}時間${m}分前`;
+}
+
+function formatIntervalShort(ms) {
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m}分`;
+  return `${h}時間${m}分`;
+}
+
+// Splits a skill name like "きょううん (食材セレクトS)" onto two lines at the
+// parenthetical, instead of relying on where the text happens to wrap.
+function SkillLabel({ skill }) {
+  const match = skill.match(/^(.+?)\s*(\(.+\))$/);
+  if (!match) return <>{skill}</>;
+  return (
+    <>
+      {match[1]}
+      <br />
+      {match[2]}
+    </>
+  );
+}
+
+function formatClock(ts) {
+  const d = new Date(ts);
+  let hour = d.getHours();
+  if (hour < DAY_START_HOUR) hour += 24; // keep in sync with the 4:00-start day boundary (e.g. 3:20 → 27:20)
+  const minute = String(d.getMinutes()).padStart(2, "0");
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+}
+
+function average(nums) {
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function displayName(mon) {
+  return mon.name;
+}
+
+function dateKey(ts) {
+  const d = startOfDay(ts);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function shortDateLabel(ts) {
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function dailyCounts(logs, days = 14) {
+  const counts = new Map();
+  logs.forEach((ts) => {
+    const k = dateKey(ts);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
+  const out = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const k = dateKey(d.getTime());
+    out.push({ label: shortDateLabel(d.getTime()), count: counts.get(k) || 0 });
+  }
+  return out;
+}
+
+function perDayAverage(logs) {
+  if (logs.length === 0) return null;
+  const first = Math.min(...logs);
+  const last = Math.max(...logs);
+  // Count actual app-day buckets (4:00-start days) spanned, matching how "a day" is
+  // defined everywhere else in the app — not just raw elapsed time divided by 24h.
+  const spanDays = Math.floor((startOfDay(last).getTime() - startOfDay(first).getTime()) / DAY_MS) + 1;
+  return logs.length / spanDays;
+}
+
+function hourDistribution(logs) {
+  const buckets = Array.from({ length: 24 }, (_, i) => ({ hour: i + DAY_START_HOUR, count: 0 }));
+  logs.forEach((ts) => {
+    const rawHour = new Date(ts).getHours();
+    const appHour = rawHour < DAY_START_HOUR ? rawHour + 24 : rawHour;
+    buckets[appHour - DAY_START_HOUR].count += 1;
+  });
+  return buckets;
+}
+
+function MonAvatar({ name, color, size = 56 }) {
+  const initial = (name || "").slice(0, 1);
+  return (
+    <div
+      className="rounded-full flex items-center justify-center font-bold shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: color,
+        color: COLORS.bg,
+        fontSize: size * 0.36,
+        fontFamily: "'Baloo 2', sans-serif",
+      }}
+    >
+      {initial}
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 flex flex-col items-center gap-1 py-2"
+      style={{ color: active ? COLORS.amber : COLORS.creamDim }}
+    >
+      <Icon size={20} />
+      <span className="text-[11px]">{label}</span>
+    </button>
+  );
+}
+
+const LONG_PRESS_MS = 400;
+const MOVE_CANCEL_PX = 16;
+
+// Long-press + drag to swap two items in a list/grid. A quick tap (no long-press,
+// no significant movement) falls through to onTap instead.
+function useSwapDrag(onSwap, onTap) {
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+  const timerRef = useRef(null);
+  const startPos = useRef({ x: 0, y: 0 });
+  const movedRef = useRef(false);
+  const dragIndexRef = useRef(null);
+  const overIndexRef = useRef(null);
+  const ignoreMouseRef = useRef(false);
+  const ignoreMouseTimerRef = useRef(null);
+  // Tracks which item's handlers most recently saw a "down" event, so finish()
+  // can call onTap even when the up event's index argument isn't otherwise available.
+  const lastIndexRef = useRef(null);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const updateOverIndex = (clientX, clientY) => {
+    const el = document.elementFromPoint(clientX, clientY);
+    const target = el && el.closest("[data-swap-index]");
+    if (target) {
+      const idx = Number(target.getAttribute("data-swap-index"));
+      overIndexRef.current = idx;
+      setOverIndex(idx);
+    }
+  };
+
+  const finish = () => {
+    clearTimer();
+    if (dragIndexRef.current !== null) {
+      const from = dragIndexRef.current;
+      const to = overIndexRef.current;
+      if (to !== null && to !== from) onSwap(from, to);
+      dragIndexRef.current = null;
+      overIndexRef.current = null;
+      setDragIndex(null);
+      setOverIndex(null);
+    } else if (!movedRef.current) {
+      onTap(lastIndexRef.current);
+    }
+  };
+
+  const start = (index, x, y) => {
+    lastIndexRef.current = index;
+    startPos.current = { x, y };
+    movedRef.current = false;
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      dragIndexRef.current = index;
+      overIndexRef.current = index;
+      setDragIndex(index);
+      setOverIndex(index);
+    }, LONG_PRESS_MS);
+  };
+
+  const move = (x, y, e) => {
+    const dx = x - startPos.current.x;
+    const dy = y - startPos.current.y;
+    if (Math.abs(dx) > MOVE_CANCEL_PX || Math.abs(dy) > MOVE_CANCEL_PX) {
+      movedRef.current = true;
+      if (dragIndexRef.current === null) clearTimer();
+    }
+    if (dragIndexRef.current !== null) {
+      if (e && e.cancelable) e.preventDefault();
+      updateOverIndex(x, y);
+    }
+  };
+
+  const getHandlers = (index) => ({
+    onTouchStart: (e) => {
+      ignoreMouseRef.current = true;
+      if (ignoreMouseTimerRef.current) clearTimeout(ignoreMouseTimerRef.current);
+      const t = e.touches[0];
+      start(index, t.clientX, t.clientY);
+    },
+    onTouchMove: (e) => {
+      const t = e.touches[0];
+      move(t.clientX, t.clientY, e);
+    },
+    onTouchEnd: (e) => {
+      if (e.cancelable) e.preventDefault();
+      finish();
+      ignoreMouseTimerRef.current = setTimeout(() => {
+        ignoreMouseRef.current = false;
+      }, 600);
+    },
+    onTouchCancel: () => {
+      clearTimer();
+      dragIndexRef.current = null;
+      overIndexRef.current = null;
+      setDragIndex(null);
+      setOverIndex(null);
+      ignoreMouseTimerRef.current = setTimeout(() => {
+        ignoreMouseRef.current = false;
+      }, 600);
+    },
+    onMouseDown: (e) => {
+      if (ignoreMouseRef.current) return;
+      start(index, e.clientX, e.clientY);
+    },
+    onMouseMove: (e) => {
+      if (ignoreMouseRef.current || e.buttons !== 1) return;
+      move(e.clientX, e.clientY, null);
+    },
+    onMouseUp: () => {
+      if (ignoreMouseRef.current) return;
+      finish();
+    },
+    onContextMenu: (e) => e.preventDefault(),
+    "data-swap-index": index,
+    style: {
+      touchAction: "manipulation",
+      WebkitTouchCallout: "none",
+      WebkitUserSelect: "none",
+      userSelect: "none",
+      transform: dragIndex === index ? "scale(1.05)" : "scale(1)",
+      opacity: dragIndex === index ? 0.75 : 1,
+      transition: "transform 0.15s ease, opacity 0.15s ease",
+    },
+  });
+
+  return { dragIndex, overIndex, getHandlers };
+}
+
+function DateNav({ label, labelColor, onPrev, onNext, onLabelClick }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <button onClick={onPrev} aria-label="前へ">
+        <ChevronLeft size={22} color={COLORS.creamDim} />
+      </button>
+      {onLabelClick ? (
+        <button onClick={onLabelClick} className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold" style={{ color: labelColor || COLORS.cream }}>
+            {label}
+          </span>
+          <CalendarDays size={14} color={COLORS.creamDim} />
+        </button>
+      ) : (
+        <span className="text-sm font-semibold" style={{ color: labelColor || COLORS.cream }}>
+          {label}
+        </span>
+      )}
+      <button onClick={onNext} aria-label="次へ">
+        <ChevronRight size={22} color={COLORS.creamDim} />
+      </button>
+    </div>
+  );
+}
+
+const WEEKDAY_HEADERS = ["月", "火", "水", "木", "金", "土", "日"];
+
+function calendarDayColor(dateObj) {
+  const wd = dateObj.getDay();
+  if (wd === 0) return COLORS.sunday;
+  if (wd === 6) return COLORS.saturday;
+  return COLORS.cream;
+}
+
+function CalendarPicker({ value, markedDates, onSelect, onClose }) {
+  const [viewMonth, setViewMonth] = useState(() => new Date(value.getFullYear(), value.getMonth(), 1));
+
+  const firstWeekday = (viewMonth.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
+  const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+
+  const changeMonth = (delta) => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + delta, 1));
+
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl p-4"
+        style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <button onClick={() => changeMonth(-1)} aria-label="前の月">
+            <ChevronLeft size={20} color={COLORS.creamDim} />
+          </button>
+          <span className="text-sm font-semibold" style={{ color: COLORS.cream }}>
+            {viewMonth.getFullYear()}年{viewMonth.getMonth() + 1}月
+          </span>
+          <button onClick={() => changeMonth(1)} aria-label="次の月">
+            <ChevronRight size={20} color={COLORS.creamDim} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 mb-1">
+          {WEEKDAY_HEADERS.map((w, i) => (
+            <div
+              key={w}
+              className="text-center text-[11px] font-medium py-1"
+              style={{ color: i === 5 ? COLORS.saturday : i === 6 ? COLORS.sunday : COLORS.creamDim }}
+            >
+              {w}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-y-1">
+          {cells.map((day, i) => {
+            if (day == null) return <div key={i} />;
+            const dateObj = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+            const isSelected =
+              dateObj.getFullYear() === value.getFullYear() &&
+              dateObj.getMonth() === value.getMonth() &&
+              dateObj.getDate() === value.getDate();
+            const hasLogs = markedDates.has(`${dateObj.getFullYear()}-${dateObj.getMonth() + 1}-${dateObj.getDate()}`);
+            return (
+              <button
+                key={i}
+                onClick={() => onSelect(dateObj)}
+                className="flex flex-col items-center justify-center py-1.5 rounded-lg"
+                style={{ background: isSelected ? COLORS.amber : "transparent" }}
+              >
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: isSelected ? COLORS.bg : calendarDayColor(dateObj) }}
+                >
+                  {day}
+                </span>
+                <span
+                  className="w-1 h-1 rounded-full mt-0.5"
+                  style={{ background: hasLogs ? (isSelected ? COLORS.bg : COLORS.teal) : "transparent" }}
+                />
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-4 rounded-lg py-2 text-sm font-semibold"
+          style={{ background: COLORS.bg, color: COLORS.creamDim, border: `1px solid ${COLORS.cardBorder}` }}
+        >
+          キャンセル
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const TIMELINE_HEIGHT = 480; // px representing 24 hours starting at 4:00
+const HOUR_MARKS = [4, 7, 10, 13, 16, 19, 22, 25, 28];
+
+function hourToY(ts, dayStart) {
+  const frac = (ts - dayStart.getTime()) / (24 * 3600 * 1000);
+  return frac * TIMELINE_HEIGHT;
+}
+
+function HourRuler() {
+  return (
+    <div className="relative shrink-0" style={{ width: 28, height: TIMELINE_HEIGHT }}>
+      {HOUR_MARKS.map((h) => (
+        <div
+          key={h}
+          className="absolute text-[10px] -translate-y-1/2"
+          style={{ top: ((h - 4) / 24) * TIMELINE_HEIGHT, color: COLORS.creamDim }}
+        >
+          {h}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Groups events that fall very close together vertically (near-identical times) and
+// spreads them out horizontally so up to several simultaneous dots stay distinguishable.
+function layoutDots(events, dayStart) {
+  const CLUSTER_PX = 7;
+  const MAX_SPREAD_PERCENT = 70;
+  const withY = events
+    .map((e) => ({ ...e, y: hourToY(e.ts, dayStart) }))
+    .sort((a, b) => a.y - b.y);
+
+  const clusters = [];
+  let current = [];
+  withY.forEach((e) => {
+    if (current.length === 0 || e.y - current[current.length - 1].y <= CLUSTER_PX) {
+      current.push(e);
+    } else {
+      clusters.push(current);
+      current = [e];
+    }
+  });
+  if (current.length) clusters.push(current);
+
+  const laidOut = [];
+  clusters.forEach((cluster) => {
+    const k = cluster.length;
+    const spread = k === 1 ? 0 : Math.min(MAX_SPREAD_PERCENT, 14 * (k - 1));
+    cluster.forEach((e, i) => {
+      const offset = k === 1 ? 0 : -spread / 2 + i * (spread / (k - 1));
+      laidOut.push({ ...e, leftPercent: 50 + offset });
+    });
+  });
+  return laidOut;
+}
+
+function DayColumn({ events, gridLines = true, dayStart }) {
+  const dots = layoutDots(events, dayStart);
+  return (
+    <div
+      className="relative flex-1"
+      style={{
+        height: TIMELINE_HEIGHT,
+        borderLeft: `1px solid ${COLORS.cardBorder}`,
+      }}
+    >
+      {gridLines &&
+        HOUR_MARKS.map((h) => (
+          <div
+            key={h}
+            className="absolute w-full border-t"
+            style={{
+              top: ((h - 4) / 24) * TIMELINE_HEIGHT,
+              borderColor: h === 4 || h === 28 ? "transparent" : COLORS.cardBorder,
+              opacity: 0.5,
+            }}
+          />
+        ))}
+      {dots.map((e, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full -translate-x-1/2 -translate-y-1/2"
+          style={{
+            top: e.y,
+            left: `${e.leftPercent}%`,
+            width: 9,
+            height: 9,
+            background: e.color,
+          }}
+          title={`${formatClock(e.ts)} ${e.name}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WeekTab({ mons, onSelectDay }) {
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const [showCalendar, setShowCalendar] = useState(false);
+  const markedDates = useMemo(() => {
+    const set = new Set();
+    mons.forEach((mon) => mon.logs.forEach((ts) => set.add(dateKey(ts))));
+    return set;
+  }, [mons]);
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => new Date(weekStart.getTime() + i * DAY_MS)),
+    [weekStart]
+  );
+  const eventsByDay = useMemo(() => {
+    return days.map((day) => {
+      const dayEnd = day.getTime() + DAY_MS;
+      const list = [];
+      mons.forEach((mon, i) => {
+        mon.logs.forEach((ts) => {
+          if (ts >= day.getTime() && ts < dayEnd) {
+            list.push({ ts, name: displayName(mon), color: monColor(mon, i) });
+          }
+        });
+      });
+      return list;
+    });
+  }, [days, mons]);
+
+  const weeklyTotal = useMemo(() => eventsByDay.reduce((sum, list) => sum + list.length, 0), [eventsByDay]);
+
+  const prevWeeklyTotal = useMemo(() => {
+    const prevStart = weekStart.getTime() - 7 * DAY_MS;
+    const prevEnd = weekStart.getTime();
+    let count = 0;
+    mons.forEach((mon) => {
+      mon.logs.forEach((ts) => {
+        if (ts >= prevStart && ts < prevEnd) count += 1;
+      });
+    });
+    return count;
+  }, [mons, weekStart]);
+
+  const diff = weeklyTotal - prevWeeklyTotal;
+
+  const monWeekCounts = useMemo(() => {
+    const weekEnd = weekStart.getTime() + 7 * DAY_MS;
+    return mons.map((mon, i) => ({
+      id: mon.id,
+      name: displayName(mon),
+      color: monColor(mon, i),
+      count: mon.logs.filter((ts) => ts >= weekStart.getTime() && ts < weekEnd).length,
+    }));
+  }, [mons, weekStart]);
+
+  const dailyTotals = useMemo(
+    () =>
+      days.map((day, i) => ({
+        label: `${day.getMonth() + 1}/${day.getDate()}`,
+        count: eventsByDay[i].length,
+        color: weekdayColor(day),
+      })),
+    [days, eventsByDay]
+  );
+
+  const rangeLabel = `${days[0].getFullYear()}/${days[0].getMonth() + 1}/${days[0].getDate()} 〜 ${
+    days[6].getMonth() + 1
+  }/${days[6].getDate()}`;
+
+  return (
+    <div>
+      <DateNav
+        label={rangeLabel}
+        onPrev={() => setWeekStart(new Date(weekStart.getTime() - 7 * DAY_MS))}
+        onNext={() => setWeekStart(new Date(weekStart.getTime() + 7 * DAY_MS))}
+        onLabelClick={() => setShowCalendar(true)}
+      />
+      {showCalendar && (
+        <CalendarPicker
+          value={weekStart}
+          markedDates={markedDates}
+          onSelect={(d) => {
+            const anchored = new Date(d.getFullYear(), d.getMonth(), d.getDate(), DAY_START_HOUR, 0, 0, 0);
+            setWeekStart(startOfWeek(anchored));
+            setShowCalendar(false);
+          }}
+          onClose={() => setShowCalendar(false)}
+        />
+      )}
+
+      {mons.length > 0 && (
+        <div
+          className="rounded-2xl p-4 mb-3 flex items-center justify-between"
+          style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+        >
+          <div>
+            <div className="text-2xl font-bold" style={{ color: COLORS.amber, fontFamily: "'Baloo 2', sans-serif" }}>
+              {weeklyTotal}
+              <span className="text-xs font-normal ml-1" style={{ color: COLORS.creamDim }}>
+                回
+              </span>
+            </div>
+            <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+              今週の合計発動数
+            </div>
+          </div>
+          <div className="text-right">
+            <div
+              className="text-sm font-semibold"
+              style={{ color: diff > 0 ? COLORS.teal : diff < 0 ? COLORS.sunday : COLORS.creamDim }}
+            >
+              {diff > 0 ? `▲ +${diff}` : diff < 0 ? `▼ ${diff}` : "± 0"}
+            </div>
+            <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+              先週は{prevWeeklyTotal}回
+            </div>
+          </div>
+        </div>
+      )}
+
+      {monWeekCounts.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {monWeekCounts.map((c) => (
+            <span
+              key={c.id}
+              className="text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.cream }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
+              {c.name} {c.count}回
+            </span>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] text-center mb-2" style={{ color: COLORS.creamDim }}>
+        日付をタップすると、その日の記録を編集できます
+      </p>
+
+      <div
+        className="rounded-2xl p-3 flex"
+        style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+      >
+        <HourRuler />
+        <div className="flex flex-1">
+          {days.map((day, i) => (
+            <button
+              key={i}
+              onClick={() => onSelectDay(day)}
+              className="flex-1 active:opacity-70"
+              aria-label={`${day.getMonth() + 1}月${day.getDate()}日の記録を編集`}
+            >
+              <DayColumn events={eventsByDay[i]} dayStart={day} />
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex mt-1 mb-4" style={{ paddingLeft: 28 }}>
+        {days.map((day, i) => (
+          <button
+            key={i}
+            onClick={() => onSelectDay(day)}
+            className="flex-1 text-center text-[11px] font-medium py-1 rounded-md active:opacity-70"
+            style={{ color: weekdayColor(day) }}
+          >
+            {day.getMonth() + 1}/{day.getDate()}
+          </button>
+        ))}
+      </div>
+
+      {mons.length > 0 && weeklyTotal > 0 && (
+        <div className="rounded-2xl p-4" style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}>
+          <p className="text-[11px] mb-1" style={{ color: COLORS.creamDim }}>
+            曜日ごとの発動数
+          </p>
+          <SimpleBarChart data={dailyTotals} valueKey="count" labelKey="label" colorKey="color" height={130} tickEvery={1} />
+        </div>
+      )}
+
+      {mons.length === 0 && (
+        <div className="text-center py-6 text-sm" style={{ color: COLORS.creamDim }}>
+          「設定」タブからポケモンを登録しましょう
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DayTab({ mons, onLog, onManualLog, onDelete, onSwap, selected, onSelectedChange }) {
+  const today = isSameDay(selected, new Date());
+  const [showManual, setShowManual] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [manualMonId, setManualMonId] = useState("");
+  const [manualTime, setManualTime] = useState(() => {
+    const n = new Date();
+    return `${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`;
+  });
+
+  const markedDates = useMemo(() => {
+    const set = new Set();
+    mons.forEach((mon) => mon.logs.forEach((ts) => set.add(dateKey(ts))));
+    return set;
+  }, [mons]);
+
+  const quickTapHandler = (i) => {
+    const mon = mons[i];
+    if (!mon) return;
+    if (today) {
+      onLog(mon.id);
+    } else {
+      setManualMonId(mon.id);
+      setShowManual(true);
+    }
+  };
+  const { dragIndex, overIndex, getHandlers } = useSwapDrag(onSwap, quickTapHandler);
+
+  const events = useMemo(() => {
+    const dayEnd = selected.getTime() + DAY_MS;
+    const list = [];
+    mons.forEach((mon, i) => {
+      mon.logs.forEach((ts, idx) => {
+        if (ts >= selected.getTime() && ts < dayEnd) {
+          const prevTs = idx > 0 ? mon.logs[idx - 1] : null;
+          list.push({
+            monId: mon.id,
+            ts,
+            name: displayName(mon),
+            skill: mon.skill,
+            color: monColor(mon, i),
+            interval: prevTs ? ts - prevTs : null,
+          });
+        }
+      });
+    });
+    list.sort((a, b) => a.ts - b.ts);
+    return list;
+  }, [mons, selected]);
+
+  const countsByMon = useMemo(() => {
+    return mons.map((mon, i) => ({
+      id: mon.id,
+      name: displayName(mon),
+      color: monColor(mon, i),
+      count: events.filter((e) => e.monId === mon.id).length,
+    }));
+  }, [mons, events]);
+
+  const dateLabel = `${selected.getFullYear()}/${selected.getMonth() + 1}/${selected.getDate()}(${weekdayLabel(
+    selected
+  )})`;
+
+  return (
+    <div>
+      <DateNav
+        label={dateLabel}
+        labelColor={weekdayColor(selected)}
+        onPrev={() => onSelectedChange(new Date(selected.getTime() - DAY_MS))}
+        onNext={() => onSelectedChange(new Date(selected.getTime() + DAY_MS))}
+        onLabelClick={() => setShowCalendar(true)}
+      />
+      {showCalendar && (
+        <CalendarPicker
+          value={selected}
+          markedDates={markedDates}
+          onSelect={(d) => {
+            onSelectedChange(new Date(d.getFullYear(), d.getMonth(), d.getDate(), DAY_START_HOUR, 0, 0, 0));
+            setShowCalendar(false);
+          }}
+          onClose={() => setShowCalendar(false)}
+        />
+      )}
+      <p className="text-[10px] text-center -mt-2 mb-3" style={{ color: COLORS.creamDim }}>
+        4:00〜翌3:59を1日として集計
+      </p>
+
+      {countsByMon.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {countsByMon.map((c) => (
+            <span
+              key={c.id}
+              className="text-[11px] px-2 py-1 rounded-full flex items-center gap-1"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.cream }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
+              {c.name} {c.count}回
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2 mb-4">
+        <HourRuler />
+        <div className="shrink-0" style={{ width: 56, position: "relative" }}>
+          <DayColumn events={events} dayStart={selected} />
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5 -mt-1">
+          {events.length === 0 && (
+            <div
+              className="text-center py-8 text-sm rounded-xl"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.creamDim }}
+            >
+              この日の記録はありません
+            </div>
+          )}
+          {events.map((e, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+            >
+              <span className="text-xs font-mono w-11 shrink-0" style={{ color: COLORS.cream }}>
+                {formatClock(e.ts)}
+              </span>
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: e.color }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate" style={{ color: COLORS.cream }}>
+                  {e.name}
+                </div>
+                <div className="text-[10px] leading-snug" style={{ color: COLORS.lavender }}>
+                  <SkillLabel skill={e.skill} />
+                  {e.interval != null && (
+                    <span style={{ color: COLORS.creamDim }}> ・前回から{formatIntervalShort(e.interval)}</span>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => onDelete(e.monId, e.ts)} aria-label="削除">
+                <Trash2 size={13} color={COLORS.creamDim} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {mons.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px]" style={{ color: COLORS.creamDim }}>
+              {today ? "タップして記録" : "タップで時刻を指定して記録"}
+            </p>
+            <button
+              onClick={() => {
+                setManualMonId("");
+                setShowManual((v) => !v);
+              }}
+              className="text-[11px] px-2 py-1 rounded-full flex items-center gap-1"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.amber }}
+            >
+              <Plus size={12} /> 時刻を指定して記録
+            </button>
+          </div>
+
+          {showManual && (
+            <div
+              className="rounded-xl p-3 mb-3 flex flex-col gap-2"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.amber}` }}
+            >
+              <select
+                value={manualMonId}
+                onChange={(e) => setManualMonId(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 outline-none text-sm"
+                style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <option value="">ポケモンを選択</option>
+                {mons.map((mon) => (
+                  <option key={mon.id} value={mon.id}>
+                    {displayName(mon)}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="time"
+                value={manualTime}
+                onChange={(e) => setManualTime(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 outline-none text-sm"
+                style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+              />
+              <button
+                onClick={() => {
+                  if (!manualMonId || !manualTime) return;
+                  onManualLog(manualMonId, composeTimestamp(selected, manualTime));
+                  setShowManual(false);
+                }}
+                className="rounded-lg py-2 text-sm font-semibold"
+                style={{ background: COLORS.amber, color: COLORS.bg }}
+              >
+                この時刻で記録を追加
+              </button>
+              <p className="text-[10px] text-center" style={{ color: COLORS.creamDim }}>
+                表示中の日(4:00〜翌3:59)の記録として追加されます
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-4 gap-2">
+            {mons.map((mon, i) => (
+              <button
+                key={mon.id}
+                {...getHandlers(i)}
+                className="relative rounded-xl flex flex-col items-center gap-1 py-3"
+                style={{
+                  background: COLORS.card,
+                  border: `1px solid ${overIndex === i && dragIndex !== null && dragIndex !== i ? COLORS.amber : COLORS.cardBorder}`,
+                  ...getHandlers(i).style,
+                }}
+              >
+                {!today && (
+                  <span className="absolute top-1 right-1">
+                    <Clock size={10} color={COLORS.creamDim} />
+                  </span>
+                )}
+                <MonAvatar name={mon.name} color={monColor(mon, i)} size={40} />
+                <span className="text-[11px] font-medium truncate w-full text-center" style={{ color: COLORS.cream }}>
+                  {displayName(mon)}
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-center mt-2" style={{ color: COLORS.creamDim }}>
+            長押しでポケモンの位置を入れ替えられます
+          </p>
+        </div>
+      )}
+      {mons.length === 0 && (
+        <div className="text-center py-6 text-sm" style={{ color: COLORS.creamDim }}>
+          「設定」タブからポケモンを登録しましょう
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DailyCountChart({ data, color }) {
+  const tickEvery = Math.max(1, Math.ceil(data.length / 6));
+  return <SimpleBarChart data={data} valueKey="count" labelKey="label" defaultColor={color} height={110} tickEvery={tickEvery} />;
+}
+
+function HourDistributionChart({ data, color }) {
+  return (
+    <SimpleBarChart
+      data={data}
+      valueKey="count"
+      labelKey="hour"
+      defaultColor={color}
+      height={110}
+      tickEvery={1}
+      formatLabel={(h) => (h % 3 === 1 ? `${h}時` : "")}
+    />
+  );
+}
+
+function StatsTab({ mons, onSwap }) {
+  const [expanded, setExpanded] = useState(() => new Set());
+  const toggle = (id) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const { dragIndex, overIndex, getHandlers } = useSwapDrag(onSwap, (i) => {
+    if (mons[i]) toggle(mons[i].id);
+  });
+
+  if (mons.length === 0) {
+    return (
+      <div
+        className="text-center py-10 rounded-2xl text-sm"
+        style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}`, color: COLORS.creamDim }}
+      >
+        まだポケモンが登録されていません
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {mons.length > 1 && (
+        <p className="text-[10px] text-center" style={{ color: COLORS.creamDim }}>
+          長押しでポケモンの位置を入れ替えられます
+        </p>
+      )}
+      {mons.map((mon, i) => {
+        const logs = mon.logs;
+        const intervals = [];
+        for (let k = 1; k < logs.length; k++) intervals.push(logs[k] - logs[k - 1]);
+        const validIntervals = intervals.filter(
+          (iv) => iv >= MIN_VALID_INTERVAL_MS && iv <= MAX_VALID_INTERVAL_MS
+        );
+        const avg = average(validIntervals);
+        const min = validIntervals.length ? Math.min(...validIntervals) : null;
+        const max = validIntervals.length ? Math.max(...validIntervals) : null;
+        const perDay = perDayAverage(logs);
+        const daily = dailyCounts(logs, 14);
+        const hours = hourDistribution(logs);
+        const color = monColor(mon, i);
+        const isOpen = expanded.has(mon.id);
+        return (
+          <div
+            key={mon.id}
+            {...getHandlers(i)}
+            className="rounded-2xl"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${overIndex === i && dragIndex !== null && dragIndex !== i ? COLORS.amber : COLORS.cardBorder}`,
+              ...getHandlers(i).style,
+            }}
+          >
+            <div className="w-full flex items-center gap-3 p-4">
+              <MonAvatar name={mon.name} color={color} size={40} />
+              <div className="flex-1 min-w-0 text-left">
+                <div className="font-semibold text-sm truncate" style={{ color: COLORS.cream }}>
+                  {displayName(mon)}
+                </div>
+                {mon.skill && (
+                  <div className="text-xs flex items-center gap-1 truncate" style={{ color: COLORS.lavender }}>
+                    <Sparkles size={12} className="shrink-0" /> {mon.skill}
+                  </div>
+                )}
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-base font-bold" style={{ color: COLORS.amber }}>
+                  {logs.length}
+                  <span className="text-[10px] font-normal ml-0.5" style={{ color: COLORS.creamDim }}>
+                    回
+                  </span>
+                </div>
+              </div>
+              {isOpen ? (
+                <ChevronUp size={18} color={COLORS.creamDim} className="shrink-0" />
+              ) : (
+                <ChevronDown size={18} color={COLORS.creamDim} className="shrink-0" />
+              )}
+            </div>
+
+            {isOpen && (
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-5 gap-2 text-center mb-4">
+                  <div>
+                    <div className="text-lg font-bold" style={{ color: COLORS.amber }}>
+                      {logs.length}
+                    </div>
+                    <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+                      合計回数
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: COLORS.cream }}>
+                      {perDay != null ? perDay.toFixed(1) : "—"}
+                    </div>
+                    <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+                      1日あたり
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: COLORS.cream }}>
+                      {avg ? formatIntervalShort(avg) : "—"}
+                    </div>
+                    <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+                      平均間隔
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: COLORS.cream }}>
+                      {min != null ? formatIntervalShort(min) : "—"}
+                    </div>
+                    <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+                      最短間隔
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: COLORS.cream }}>
+                      {max != null ? formatIntervalShort(max) : "—"}
+                    </div>
+                    <div className="text-[10px]" style={{ color: COLORS.creamDim }}>
+                      最長間隔
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-center -mt-2 mb-3" style={{ color: COLORS.creamDim }}>
+                  間隔の平均・最短・最長は1分〜24時間の範囲のみで計算
+                  <br />
+                  (記録し忘れ等の欠測は除外)
+                </p>
+                {logs.length > 0 && (
+                  <>
+                    <div className="mb-3">
+                      <p className="text-[11px] mb-1" style={{ color: COLORS.creamDim }}>
+                        直近14日間の発動数
+                      </p>
+                      <DailyCountChart data={daily} color={color} />
+                    </div>
+                    <div>
+                      <p className="text-[11px] mb-1" style={{ color: COLORS.creamDim }}>
+                        時間帯別の発動傾向(0〜23時)
+                      </p>
+                      <HourDistributionChart data={hours} color={color} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ColorPicker({ value, onChange, autoColor }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {MON_PALETTE.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(c)}
+          className="w-7 h-7 rounded-full shrink-0"
+          style={{ background: c, border: value === c ? `2px solid ${COLORS.cream}` : "2px solid transparent" }}
+          aria-label={`色 ${c}`}
+        />
+      ))}
+      <label
+        className="w-7 h-7 rounded-full flex items-center justify-center cursor-pointer relative shrink-0"
+        style={{ background: value && !MON_PALETTE.includes(value) ? value : COLORS.bg, border: `1px dashed ${COLORS.cardBorder}` }}
+      >
+        <Palette size={13} color={COLORS.creamDim} />
+        <input
+          type="color"
+          value={value || autoColor}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+        />
+      </label>
+      {value && (
+        <button type="button" onClick={() => onChange("")} className="text-[10px]" style={{ color: COLORS.creamDim }}>
+          自動に戻す
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ManageTab({ mons, onAdd, onUpdate, onDelete, onSwap }) {
+  const [species, setSpecies] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [skill, setSkill] = useState("");
+  const [color, setColor] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editSkill, setEditSkill] = useState("");
+  const [editColor, setEditColor] = useState("");
+  const [showSpeciesSuggest, setShowSpeciesSuggest] = useState(false);
+  const [showSkillSuggest, setShowSkillSuggest] = useState(false);
+  const [showEditSkillSuggest, setShowEditSkillSuggest] = useState(false);
+
+  const pickSpecies = (v) => {
+    setSpecies(v);
+    if (SPECIES_SKILL_MAP[v]) setSkill(SPECIES_SKILL_MAP[v]);
+    setShowSpeciesSuggest(false);
+  };
+
+  const speciesSuggestions = (() => {
+    const q = toKatakana(species.trim());
+    if (!q) return [];
+    return SPECIES_SUGGESTIONS.filter((s) => s.startsWith(q)).slice(0, 30);
+  })();
+
+  const skillSuggestions = (() => {
+    const q = toKatakana(skill.trim());
+    if (!q) return [];
+    return SKILL_SUGGESTIONS.filter((s) => s.startsWith(q)).slice(0, 30);
+  })();
+
+  const editSkillSuggestions = (() => {
+    const q = toKatakana(editSkill.trim());
+    if (!q) return [];
+    return SKILL_SUGGESTIONS.filter((s) => s.startsWith(q)).slice(0, 30);
+  })();
+
+  const startEdit = (mon) => {
+    setEditingId(mon.id);
+    setEditName(mon.name);
+    setEditSkill(mon.skill || "");
+    setEditColor(mon.color || "");
+  };
+
+  const { dragIndex, overIndex, getHandlers } = useSwapDrag(onSwap, (i) => startEdit(mons[i]));
+
+  const saveEdit = () => {
+    if (!editName.trim()) return;
+    onUpdate(editingId, { name: editName.trim(), skill: editSkill.trim(), color: editColor || null });
+    setEditingId(null);
+  };
+
+  const handleAdd = () => {
+    if (!species.trim()) return;
+    onAdd({
+      id: uid(),
+      species: species.trim(),
+      name: nickname.trim() || species.trim(),
+      skill: skill.trim(),
+      color: color || colorFor(mons.length),
+      logs: [],
+    });
+    setSpecies("");
+    setNickname("");
+    setSkill("");
+    setColor("");
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+
+      <div className="rounded-2xl p-4" style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: COLORS.cream }}>
+          ポケモンを追加
+        </h3>
+        <div className="flex flex-col gap-2">
+          <div>
+            <label className="text-[11px] block mb-1" style={{ color: COLORS.creamDim }}>
+              ① ポケモンを選択
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={species}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSpecies(v);
+                  setShowSpeciesSuggest(true);
+                  if (SPECIES_SKILL_MAP[v]) setSkill(SPECIES_SKILL_MAP[v]);
+                }}
+                onFocus={() => setShowSpeciesSuggest(true)}
+                onBlur={() => setTimeout(() => setShowSpeciesSuggest(false), 150)}
+                placeholder="例: デデンネ"
+                className="w-full rounded-lg pl-3 pr-9 py-2 outline-none text-sm"
+                style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+              />
+              <select
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  pickSpecies(v);
+                }}
+                aria-label="一覧からポケモンを選択"
+                className="absolute right-0 top-0 h-full w-10 opacity-0 cursor-pointer"
+              >
+                <option value="">一覧から選択</option>
+                {SPECIES_SUGGESTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                color={COLORS.creamDim}
+                className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              />
+              {showSpeciesSuggest && speciesSuggestions.length > 0 && (
+                <div
+                  className="absolute left-0 right-0 mt-1 rounded-lg overflow-y-auto z-20"
+                  style={{
+                    top: "100%",
+                    maxHeight: "9.5rem",
+                    background: COLORS.bg,
+                    border: `1px solid ${COLORS.cardBorder}`,
+                  }}
+                >
+                  {speciesSuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => pickSpecies(s)}
+                      className="w-full text-left px-3 py-2 text-sm"
+                      style={{ color: COLORS.cream, borderBottom: `1px solid ${COLORS.cardBorder}` }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="text-[11px] block mb-1" style={{ color: COLORS.creamDim }}>
+              ② ニックネーム(空欄なら①をそのまま使用)
+            </label>
+            <input
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="例: でんきの妖精さん"
+              className="w-full rounded-lg px-3 py-2 outline-none text-sm"
+              style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] block mb-1" style={{ color: COLORS.creamDim }}>
+              ③ メインスキル(任意)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={skill}
+                onChange={(e) => {
+                  setSkill(e.target.value);
+                  setShowSkillSuggest(true);
+                }}
+                onFocus={() => setShowSkillSuggest(true)}
+                onBlur={() => setTimeout(() => setShowSkillSuggest(false), 150)}
+                placeholder="①選択で自動入力(手動修正も可)"
+                className="w-full rounded-lg px-3 py-2 outline-none text-sm"
+                style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+              />
+              {showSkillSuggest && skillSuggestions.length > 0 && (
+                <div
+                  className="absolute left-0 right-0 mt-1 rounded-lg overflow-y-auto z-20"
+                  style={{ top: "100%", maxHeight: "9.5rem", background: COLORS.bg, border: `1px solid ${COLORS.cardBorder}` }}
+                >
+                  {skillSuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setSkill(s);
+                        setShowSkillSuggest(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm"
+                      style={{ color: COLORS.cream, borderBottom: `1px solid ${COLORS.cardBorder}` }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="text-[11px] block mb-1" style={{ color: COLORS.creamDim }}>
+              ④ 色(任意、未指定なら自動割り当て)
+            </label>
+            <ColorPicker value={color} onChange={setColor} autoColor={colorFor(mons.length)} />
+          </div>
+          <button
+            onClick={handleAdd}
+            className="rounded-lg py-2 text-sm font-semibold flex items-center justify-center gap-1 mt-1"
+            style={{ background: COLORS.amber, color: COLORS.bg }}
+          >
+            <Plus size={16} /> 追加する
+          </button>
+        </div>
+      </div>
+
+      {mons.length > 1 && (
+        <p className="text-[10px] text-center -mt-1" style={{ color: COLORS.creamDim }}>
+          長押しでポケモンの位置を入れ替えられます
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {mons.map((mon, i) =>
+          editingId === mon.id ? (
+            <div
+              key={mon.id}
+              className="rounded-xl px-3 py-3 flex flex-col gap-2"
+              style={{ background: COLORS.card, border: `1px solid ${COLORS.amber}` }}
+            >
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="ニックネーム"
+                className="w-full rounded-lg px-3 py-2 outline-none text-sm"
+                style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={editSkill}
+                  onChange={(e) => {
+                    setEditSkill(e.target.value);
+                    setShowEditSkillSuggest(true);
+                  }}
+                  onFocus={() => setShowEditSkillSuggest(true)}
+                  onBlur={() => setTimeout(() => setShowEditSkillSuggest(false), 150)}
+                  placeholder="メインスキル"
+                  className="w-full rounded-lg px-3 py-2 outline-none text-sm"
+                  style={{ background: COLORS.bg, color: COLORS.cream, border: `1px solid ${COLORS.cardBorder}` }}
+                />
+                {showEditSkillSuggest && editSkillSuggestions.length > 0 && (
+                  <div
+                    className="absolute left-0 right-0 mt-1 rounded-lg overflow-y-auto z-20"
+                    style={{ top: "100%", maxHeight: "9.5rem", background: COLORS.bg, border: `1px solid ${COLORS.cardBorder}` }}
+                  >
+                    {editSkillSuggestions.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setEditSkill(s);
+                          setShowEditSkillSuggest(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm"
+                        style={{ color: COLORS.cream, borderBottom: `1px solid ${COLORS.cardBorder}` }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <ColorPicker value={editColor} onChange={setEditColor} autoColor={colorFor(i)} />
+              <div className="flex gap-2">
+                <button
+                  onClick={saveEdit}
+                  className="flex-1 rounded-lg py-2 text-sm font-semibold"
+                  style={{ background: COLORS.amber, color: COLORS.bg }}
+                >
+                  保存
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="flex-1 rounded-lg py-2 text-sm"
+                  style={{ background: COLORS.bg, color: COLORS.creamDim, border: `1px solid ${COLORS.cardBorder}` }}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              key={mon.id}
+              {...getHandlers(i)}
+              className="flex items-center gap-3 rounded-xl px-3 py-2"
+              style={{
+                background: COLORS.card,
+                border: `1px solid ${overIndex === i && dragIndex !== null && dragIndex !== i ? COLORS.amber : COLORS.cardBorder}`,
+                ...getHandlers(i).style,
+              }}
+            >
+              <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                <MonAvatar name={mon.name} color={monColor(mon, i)} size={36} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate" style={{ color: COLORS.cream }}>
+                    {displayName(mon)}
+                  </div>
+                  {(mon.species || mon.skill) && (
+                    <div className="text-xs truncate" style={{ color: COLORS.lavender }}>
+                      {[mon.species, mon.skill].filter(Boolean).join(" ・ ")}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onDelete(mon.id)}
+                aria-label="削除"
+              >
+                <Trash2 size={16} color={COLORS.creamDim} />
+              </button>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PokemonSleepTracker() {
+  const [mons, setMons] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(null);
+  const [tab, setTab] = useState("day");
+  const [dayTabDate, setDayTabDate] = useState(() => startOfDay(new Date()));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await window.storage.get(STORAGE_KEY, false);
+        const loadedMons = res && res.value ? JSON.parse(res.value) : [];
+        // Backfill a fixed color for any pokemon that predates per-pokemon color storage,
+        // so colors stay put on that pokemon even after reordering/swapping.
+        let changed = false;
+        const withColors = loadedMons.map((m, i) => {
+          if (m.color) return m;
+          changed = true;
+          return { ...m, color: colorFor(i) };
+        });
+        setMons(withColors);
+        if (changed && withColors.length > 0) {
+          try {
+            await window.storage.set(STORAGE_KEY, JSON.stringify(withColors), false);
+          } catch (e) {
+            // ignore; will retry to persist on the next change
+          }
+        }
+      } catch (e) {
+        setMons([]);
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  const persist = async (next) => {
+    setMons(next);
+    try {
+      const result = await window.storage.set(STORAGE_KEY, JSON.stringify(next), false);
+      setError(result ? null : "保存に失敗しました");
+    } catch (e) {
+      setError("保存に失敗しました");
+    }
+  };
+
+  const addMon = (mon) => persist([...(mons || []), mon]);
+  const updateMon = (id, updates) => persist((mons || []).map((m) => (m.id === id ? { ...m, ...updates } : m)));
+  const deleteMon = (id) => persist((mons || []).filter((m) => m.id !== id));
+  const swapMons = (i, j) => {
+    const next = [...(mons || [])];
+    if (!next[i] || !next[j]) return;
+    [next[i], next[j]] = [next[j], next[i]];
+    persist(next);
+  };
+  const logSkill = (id, ts) =>
+    persist(
+      (mons || []).map((m) => (m.id === id ? { ...m, logs: [...m.logs, ts ?? Date.now()].sort((a, b) => a - b) } : m))
+    );
+  const deleteLog = (id, ts) =>
+    persist((mons || []).map((m) => (m.id === id ? { ...m, logs: m.logs.filter((l) => l !== ts) } : m)));
+
+  return (
+    <div className="min-h-screen w-full flex flex-col" style={{ background: COLORS.bg, fontFamily: "system-ui, sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap');`}</style>
+
+      <header
+        className="px-4 pt-6 pb-3 sticky top-0 z-10"
+        style={{ background: `linear-gradient(180deg, #1B2A4D 0%, ${COLORS.bg} 100%)` }}
+      >
+        <h1 className="text-xl font-bold" style={{ color: COLORS.cream, fontFamily: "'Baloo 2', sans-serif" }}>
+          ポモログ
+        </h1>
+      </header>
+
+      <main className="flex-1 px-4 pb-4 overflow-y-auto">
+        {error && (
+          <div className="mb-3 text-xs px-3 py-2 rounded-lg" style={{ background: "#4A2530", color: COLORS.amber }}>
+            {error}
+          </div>
+        )}
+        {!loaded ? (
+          <div className="text-center py-16 text-sm" style={{ color: COLORS.creamDim }}>
+            読み込み中...
+          </div>
+        ) : (
+          <>
+            {mons.length === 0 && (
+              <div
+                className="rounded-2xl p-4 mb-4"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.amber}` }}
+              >
+                <h2
+                  className="text-base font-bold mb-1"
+                  style={{ color: COLORS.cream, fontFamily: "'Baloo 2', sans-serif" }}
+                >
+                  ポモログへようこそ
+                </h2>
+                <p className="text-xs mb-3 leading-relaxed" style={{ color: COLORS.creamDim }}>
+                  ポケモンスリープでポケモンが発動したスキルの回数や間隔を記録して、グラフで振り返れるアプリです。まずはポケモンを1匹登録してみましょう。
+                </p>
+                <button
+                  onClick={() => setTab("manage")}
+                  className="rounded-lg px-3 py-2 text-sm font-semibold"
+                  style={{ background: COLORS.amber, color: COLORS.bg }}
+                >
+                  ポケモンを登録する →
+                </button>
+              </div>
+            )}
+            {tab === "week" && (
+              <WeekTab
+                mons={mons}
+                onSelectDay={(day) => {
+                  setDayTabDate(day);
+                  setTab("day");
+                }}
+              />
+            )}
+            {tab === "day" && (
+              <DayTab
+                mons={mons}
+                onLog={logSkill}
+                onManualLog={logSkill}
+                onDelete={deleteLog}
+                onSwap={swapMons}
+                selected={dayTabDate}
+                onSelectedChange={setDayTabDate}
+              />
+            )}
+            {tab === "stats" && <StatsTab mons={mons} onSwap={swapMons} />}
+            {tab === "manage" && (
+              <ManageTab mons={mons} onAdd={addMon} onUpdate={updateMon} onDelete={deleteMon} onSwap={swapMons} />
+            )}
+          </>
+        )}
+      </main>
+
+      <nav className="flex sticky bottom-0" style={{ background: COLORS.card, borderTop: `1px solid ${COLORS.cardBorder}` }}>
+        <TabButton active={tab === "week"} onClick={() => setTab("week")} icon={CalendarDays} label="週間" />
+        <TabButton active={tab === "day"} onClick={() => setTab("day")} icon={ListTree} label="きろく" />
+        <TabButton active={tab === "stats"} onClick={() => setTab("stats")} icon={BarChart2} label="とうけい" />
+        <TabButton active={tab === "manage"} onClick={() => setTab("manage")} icon={Settings} label="設定" />
+      </nav>
+    </div>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<PokemonSleepTracker />);
+</script>
+</body>
+</html>
