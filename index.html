@@ -755,23 +755,10 @@
             return;
           }
           const fileName = 'ポケスリ自己紹介カード.png';
-          const file = new File([blob], fileName, { type: 'image/png' });
-
-          // iOS Safari / in-app browsers (X, LINE, etc.) don't support <a download>,
-          // so try the native share sheet first — it lets you save straight to Photos.
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: fileName })
-              .then(() => { btn.textContent = originalText; })
-              .catch(() => {
-                // user cancelled the share sheet, or share failed — fall back to new tab
-                openImageInNewTab(blob);
-                btn.textContent = originalText;
-              });
-            return;
-          }
-
-          // desktop browsers: normal download link works fine
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+          // Android / desktop: a normal download link works great and is the
+          // least surprising option, so use it directly — no share sheet detour.
           if (!isIOS) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -782,6 +769,20 @@
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 4000);
             btn.textContent = originalText;
+            return;
+          }
+
+          // iOS Safari / in-app browsers (X, LINE, etc.) don't support <a download>,
+          // so use the native share sheet — it lets you save straight to Photos.
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: fileName })
+              .then(() => { btn.textContent = originalText; })
+              .catch(() => {
+                // user cancelled the share sheet, or share failed — fall back to new tab
+                openImageInNewTab(blob);
+                btn.textContent = originalText;
+              });
             return;
           }
 
