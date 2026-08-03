@@ -687,6 +687,16 @@
 <script>
   const card = document.getElementById('card');
 
+  function openImageInNewTab(blob) {
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      alert('保存できませんでした。ポップアップがブロックされている可能性があります。ブラウザの設定でポップアップを許可してから、もう一度お試しください。');
+      return;
+    }
+    alert('新しいタブに画像を開きました。画像を長押しして「写真に追加」または「画像を保存」を選んでください。');
+  }
+
   document.getElementById('saveBtn').addEventListener('click', () => {
     const btn = document.getElementById('saveBtn');
     const originalText = btn.textContent;
@@ -737,14 +747,49 @@
         ctx.restore();
 
         restoreUI();
-        const dataUrl = out.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = 'ポケスリ自己紹介カード.png';
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        btn.textContent = originalText;
+
+        out.toBlob((blob) => {
+          if (!blob) {
+            btn.textContent = originalText;
+            alert('画像の生成に失敗しました。もう一度お試しください。');
+            return;
+          }
+          const fileName = 'ポケスリ自己紹介カード.png';
+          const file = new File([blob], fileName, { type: 'image/png' });
+
+          // iOS Safari / in-app browsers (X, LINE, etc.) don't support <a download>,
+          // so try the native share sheet first — it lets you save straight to Photos.
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: fileName })
+              .then(() => { btn.textContent = originalText; })
+              .catch(() => {
+                // user cancelled the share sheet, or share failed — fall back to new tab
+                openImageInNewTab(blob);
+                btn.textContent = originalText;
+              });
+            return;
+          }
+
+          // desktop browsers: normal download link works fine
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          if (!isIOS) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+            btn.textContent = originalText;
+            return;
+          }
+
+          // iOS fallback with no share support: open image in a new tab so it can be
+          // saved via long-press → "Add to Photos"
+          openImageInNewTab(blob);
+          btn.textContent = originalText;
+        }, 'image/png');
       }).catch((err) => {
         restoreUI();
         btn.textContent = originalText;
