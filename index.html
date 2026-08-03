@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ポケモンスリープ 自己紹介カード ジェネレーター</title>
+<meta name="description" content="ポケモンスリープの自己紹介カードを作れる無料ツール。項目をタップして入力し、配色を選んで画像として保存できます。">
+<meta property="og:title" content="ポケモンスリープ 自己紹介カード ジェネレーター">
+<meta property="og:description" content="項目をタップして入力するだけ。配色を選んで画像として保存できるポケスリ自己紹介カードメーカーです。">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%98%B4%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+  onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';document.head.appendChild(s);"></script>
+<style>
+  :root{
+    --sky-top: #cdeaff;
+    --sky-mid: #dff2ff;
+    --lavender: #e7ddff;
+    --moon-yellow: #ffe27a;
+    --ink: #4a4470;
+    --plum: #7a5ea8;
+    --pink: #ff8fb3;
+    --pink-deep: #ef5f92;
+    --card-bg: #ffffff;
+    --line: #e7e2f5;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #cfe8ff 0%, #d9d3ff 55%, #f3d9f0 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff5d1, #ffd873 60%, #ffbf4d 100%);
+    --badge-grad: linear-gradient(180deg,#ffe9f2,#ffd3e6);
+    --plate-bg: #ffffff;
+    --kicker-bg: rgba(255,255,255,0.7);
+    --header-text: #5b4aa0;
+  }
+
+  /* ---- theme: ピンクドリーム ---- */
+  body[data-theme="pink"]{
+    --sky-top:#ffe1ec; --sky-mid:#ffeef4; --lavender:#ffd7e6;
+    --moon-yellow:#ffe27a; --ink:#7a3b57; --plum:#c15c85;
+    --pink:#ff8fb3; --pink-deep:#ef5f92; --line:#ffd9e6;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #ffb6cf 0%, #ff9fc0 55%, #ffcfe0 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff0f5, #ffc2d6 60%, #ff9fbf 100%);
+    --badge-grad: linear-gradient(180deg,#fff0f5,#ffd7e6);
+    --header-text:#8a2f52;
+  }
+
+  /* ---- theme: ナイトブルー ---- */
+  body[data-theme="night"]{
+    --sky-top:#1b2a55; --sky-mid:#25376b; --lavender:#32447e;
+    --moon-yellow:#ffe27a; --ink:#33396b; --plum:#5a6aa8;
+    --pink:#ffb75e; --pink-deep:#f5972e; --line:#e4e6f5;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #16234a 0%, #24336b 55%, #3a4a8f 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff5d1, #ffd873 60%, #ffbf4d 100%);
+    --badge-grad: linear-gradient(180deg,#fff2df,#ffe0b3);
+    --header-text:#ffe6c2;
+  }
+
+  /* ---- theme: みずたまミント ---- */
+  body[data-theme="mint"]{
+    --sky-top:#d4f5e4; --sky-mid:#e3f8ee; --lavender:#cdeee0;
+    --moon-yellow:#ffe27a; --ink:#2f6152; --plum:#4a9179;
+    --pink:#6bc9a0; --pink-deep:#2fa87d; --line:#cdeee0;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #b7ecd2 0%, #cdeee0 55%, #eef8ce 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff5d1, #ffd873 60%, #ffbf4d 100%);
+    --badge-grad: linear-gradient(180deg,#e6f9ee,#c9f0dc);
+    --header-text:#2f6152;
+  }
+
+  /* ==== リサーチフィールドカラー ==== */
+
+  /* ワカクサ本島（若草色） */
+  body[data-theme="wakakusa"]{
+    --sky-top:#e4f5b8; --sky-mid:#eef9d0; --lavender:#cde878;
+    --moon-yellow:#fff2a8; --ink:#33481c; --plum:#4c6b28;
+    --pink:#c3d82e; --pink-deep:#5da12e; --line:#d5ec8e;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #6fa82e 0%, #9dcb3a 50%, #d9e86a 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fffbd6, #e9e85a 55%, #a9c421 100%);
+    --badge-grad: linear-gradient(180deg,#e6f2b0,#cde878);
+    --field-bg:#f6fbdf;
+    --header-text:#f3ffd0;
+  }
+
+  /* シアンの砂浜（シアン） */
+  body[data-theme="cyan"]{
+    --sky-top:#7fdfec; --sky-mid:#b8eff5; --lavender:#eaf5ca;
+    --moon-yellow:#ffe9a0; --ink:#0d4a53; --plum:#0e7a89;
+    --pink:#1fd9c4; --pink-deep:#00a8bf; --line:#a8e6ec;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #00acc1 0%, #26cad8 45%, #7fe8dc 75%, #f5e6a8 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff9e0, #5be0d8 55%, #00a8bf 100%);
+    --badge-grad: linear-gradient(180deg,#c8f5f2,#7fe0d8);
+    --field-bg:#eafcfa;
+    --header-text:#f5fffd;
+  }
+
+  /* トープ洞窟（トープ） */
+  body[data-theme="taupe"]{
+    --sky-top:#e9e2d3; --sky-mid:#efe9db; --lavender:#d3c6ac;
+    --moon-yellow:#f0c419; --ink:#3a332c; --plum:#685c4f;
+    --pink:#a89478; --pink-deep:#d9a316; --line:#ddd0b9;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #4d4852 0%, #6b6570 30%, #8a7c68 65%, #b6a488 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff6d0, #f0c419 55%, #c98f10 100%);
+    --badge-grad: linear-gradient(180deg,#efe4cf,#d8c7a3);
+    --field-bg:#f5efe0;
+    --header-text:#faf3e0;
+  }
+
+  /* ウノハナ雪原（卯の花色） */
+  body[data-theme="unohana"]{
+    --sky-top:#fbfaf6; --sky-mid:#ffffff; --lavender:#eef1ef;
+    --moon-yellow:#ffe9a8; --ink:#5c6a72; --plum:#7994a1;
+    --pink:#a9c3cd; --pink-deep:#6f9aab; --line:#e5ebec;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #eef6f7 0%, #f7faf6 55%, #ffffff 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #ffffff, #e6f1f3 60%, #cfe3e7 100%);
+    --badge-grad: linear-gradient(180deg,#f5f9f9,#e3edee);
+    --field-bg:#f8fafa;
+    --header-text:#4f6169;
+  }
+
+  /* ラピスラズリ湖畔（瑠璃色） */
+  body[data-theme="lapis"]{
+    --sky-top:#bdeef5; --sky-mid:#d0f7e8; --lavender:#b8f0d8;
+    --moon-yellow:#f0d419; --ink:#134a3e; --plum:#1a7a68;
+    --pink:#8a6fd8; --pink-deep:#5a4bc4; --line:#b0eed8;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #1f6f8a 0%, #1eab94 45%, #2edcac 75%, #7cf5c4 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff8dd, #f0d419 55%, #d9a616 100%);
+    --badge-grad: linear-gradient(180deg,#d0f5e8,#a0e8cc);
+    --field-bg:#eafcf5;
+    --header-text:#f5fffb;
+  }
+
+  /* ゴールド旧発電所（金色） */
+  body[data-theme="gold"]{
+    --sky-top:#eaf5c0; --sky-mid:#f3f9d0; --lavender:#fff2b0;
+    --moon-yellow:#fff1a0; --ink:#39510f; --plum:#587a1e;
+    --pink:#e0a316; --pink-deep:#c96a1f; --line:#e3edb0;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #355a17 0%, #6ea82e 40%, #b8d94a 70%, #fff3a0 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fffbe0, #ffe873 55%, #d9a416 100%);
+    --badge-grad: linear-gradient(180deg,#eef6c4,#d9e69a);
+    --field-bg:#f8fbe4;
+    --header-text:#fdfce0;
+  }
+
+  /* アンバー渓谷（琥珀色） */
+  body[data-theme="amber"]{
+    --sky-top:#ffe4bd; --sky-mid:#ffd89e; --lavender:#f0b96a;
+    --moon-yellow:#ffe7b0; --ink:#6b3c10; --plum:#a15f1c;
+    --pink:#e8934a; --pink-deep:#c76e1f; --line:#f2c68f;
+    --page-grad: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 45%, var(--lavender) 100%);
+    --header-grad: linear-gradient(160deg, #d67a1e 0%, #eb9c3e 55%, #f7cd8a 100%);
+    --avatar-grad: radial-gradient(circle at 35% 30%, #fff3dd, #f5b45c 60%, #dd8a26 100%);
+    --badge-grad: linear-gradient(180deg,#fbe6c4,#f0c88f);
+    --field-bg:#fff2df;
+    --header-text:#fff2df;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+    padding:28px 14px 60px;
+    font-family:'M PLUS Rounded 1c', sans-serif;
+    background:
+      radial-gradient(circle at 85% 8%, rgba(255,255,255,0.9) 0px, rgba(255,255,255,0) 60px),
+      var(--page-grad);
+    color:var(--ink);
+    overflow-x:auto;
+  }
+  #card-scroll{
+    width:100%;
+    max-width:920px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .toolbar{
+    width:100%;
+    max-width:560px;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+  }
+  .toolbar button{
+    font-family:'M PLUS Rounded 1c', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    border:none;
+    border-radius:999px;
+    padding:10px 20px;
+    cursor:pointer;
+    background:var(--pink-deep);
+    color:#fff;
+    box-shadow:0 4px 0 #c94472;
+    transition:transform .08s ease;
+  }
+  .toolbar button:active{ transform:translateY(3px); box-shadow:0 1px 0 #c94472; }
+  .toolbar button.secondary{
+    background:#fff;
+    color:var(--pink-deep);
+    box-shadow:0 4px 0 var(--line);
+    border:2px solid var(--pink-deep);
+  }
+  .hint{
+    max-width:560px;
+    font-size:12.5px;
+    color:var(--plum);
+    text-align:center;
+    line-height:1.5;
+    opacity:.85;
+  }
+
+  .theme-picker{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:center;
+    max-width:400px;
+  }
+  .theme-picker-label{
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--plum);
+    letter-spacing:.04em;
+    margin-top:2px;
+  }
+  .swatch{
+    width:34px; height:34px;
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow:0 0 0 2px var(--line), 0 3px 8px rgba(120,100,180,0.25);
+    cursor:pointer;
+    padding:0;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .swatch:hover{ transform:translateY(-2px); }
+  .swatch.active{ box-shadow:0 0 0 3px var(--pink-deep), 0 3px 8px rgba(120,100,180,0.3); }
+
+  #card{
+    position:relative;
+    width:100%;
+    max-width:920px;
+    min-width:880px;
+    background:var(--card-bg);
+    border-radius:28px;
+    overflow:hidden;
+    box-shadow:0 18px 40px rgba(120,100,180,0.25);
+  }
+
+  /* ---- header ---- */
+  .header{
+    position:relative;
+    padding:26px 24px 34px;
+    background:var(--header-grad);
+    overflow:hidden;
+  }
+  .stars{
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, #fff 100%, transparent 0),
+      radial-gradient(2px 2px at 75% 20%, #fff 100%, transparent 0),
+      radial-gradient(1.5px 1.5px at 60% 55%, #fff 100%, transparent 0),
+      radial-gradient(2px 2px at 90% 65%, #fff 100%, transparent 0),
+      radial-gradient(1.5px 1.5px at 35% 75%, #fff 100%, transparent 0);
+    opacity:.9;
+  }
+  .moon{
+    position:absolute;
+    top:14px; right:20px;
+    width:46px; height:46px;
+    border-radius:50%;
+    background:var(--moon-yellow);
+    box-shadow:0 0 0 6px rgba(255,226,122,0.25), inset -10px -6px 0 rgba(0,0,0,0.06);
+  }
+  .kicker{
+    position:relative;
+    font-size:12px;
+    letter-spacing:.12em;
+    font-weight:700;
+    color:var(--plum);
+    background:var(--kicker-bg);
+    display:inline-block;
+    padding:4px 12px;
+    border-radius:999px;
+  }
+  .title{
+    position:relative;
+    font-family:'Zen Maru Gothic', sans-serif;
+    font-weight:900;
+    font-size:26px;
+    color:var(--header-text);
+    margin:10px 0 2px;
+    text-shadow:0 2px 0 rgba(255,255,255,0.6);
+  }
+  .subtitle{
+    position:relative;
+    font-size:12px;
+    color:var(--header-text);
+    opacity:.8;
+  }
+
+  /* ---- name plate ---- */
+  .nameplate{
+    margin:-18px 20px 0;
+    position:relative;
+    background:var(--plate-bg);
+    border-radius:20px;
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    box-shadow:0 8px 18px rgba(120,100,180,0.18);
+  }
+  .avatar{
+    position:relative;
+    flex:none;
+    width:58px; height:58px;
+    border-radius:50%;
+    background:var(--avatar-grad);
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px;
+    box-shadow:inset 0 -4px 6px rgba(0,0,0,0.08), 0 4px 10px rgba(255,190,80,0.4);
+    cursor:pointer;
+    overflow:hidden;
+    transition:box-shadow .12s ease;
+  }
+  .avatar:hover, .avatar:focus{
+    box-shadow:inset 0 -4px 6px rgba(0,0,0,0.08), 0 4px 10px rgba(255,190,80,0.4), 0 0 0 3px var(--pink-deep);
+    outline:none;
+  }
+  .avatar-preview{
+    width:100%; height:100%;
+    object-fit:cover;
+    border-radius:50%;
+  }
+  .avatar-edit{
+    position:absolute;
+    right:-2px; bottom:-2px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:#fff;
+    font-size:10px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 5px rgba(0,0,0,0.25);
+  }
+  .name-block{ flex:1; min-width:0; }
+  .field-label{
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--pink-deep);
+    letter-spacing:.05em;
+  }
+  .name-value{
+    font-family:'Zen Maru Gothic', sans-serif;
+    font-size:22px;
+    font-weight:700;
+    color:var(--ink);
+    margin-top:2px;
+    outline:none;
+    border-bottom:2px dashed transparent;
+  }
+  .badge{
+    flex:none;
+    text-align:center;
+    background:var(--badge-grad);
+    border-radius:14px;
+    padding:6px 12px;
+  }
+  .badge .num{ font-weight:800; font-size:19px; color:var(--pink-deep); outline:none; }
+  .badge .lbl{ font-size:9.5px; color:var(--plum); }
+
+  /* ---- body ---- */
+  .body{ padding:22px 24px 26px; }
+
+  .body-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:0 20px;
+    align-items:start;
+  }
+  .col{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-width:0;
+  }
+
+  .row2{ display:flex; gap:12px; }
+  .row2 .cell{ flex:1; }
+
+  .field{
+    background:var(--field-bg, #faf8ff);
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    padding:10px 14px;
+  }
+  .field .field-label{ margin-bottom:4px; display:block; }
+  .field .val{
+    font-size:16px;
+    font-weight:500;
+    color:var(--ink);
+    outline:none;
+    min-height:20px;
+    line-height:1.5;
+  }
+  .val[contenteditable]:empty::before{
+    content: attr(data-ph);
+    color:#b9b2d6;
+    font-weight:400;
+  }
+  .val:focus, .name-value:focus, .badge .num:focus{
+    border-bottom:2px dashed var(--pink-deep);
+  }
+
+  .choice-row{ font-size:14.5px; }
+  .choice-row .val{ font-size:14.5px; }
+
+  .two-col{ display:flex; gap:12px; }
+  .two-col .field{ flex:1; }
+  .stack-col{ display:flex; flex-direction:column; gap:12px; }
+
+  .section-title{
+    font-family:'Zen Maru Gothic',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--plum);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:2px;
+  }
+  .section-title::before{
+    content:"";
+    width:6px; height:6px;
+    background:var(--pink-deep);
+    border-radius:50%;
+    display:inline-block;
+  }
+
+  .free-field .val{ min-height:44px; line-height:1.6; }
+
+  .photo-field{ padding-bottom:12px; }
+  .photo-zone{
+    position:relative;
+    margin-top:6px;
+    min-height:140px;
+    border-radius:14px;
+    border:2px dashed #cabcec;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    cursor:pointer;
+    overflow:hidden;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .photo-zone:hover, .photo-zone:focus, .photo-zone.dragover{
+    border-color:var(--pink-deep);
+    background:#fff6fa;
+  }
+  .photo-placeholder{
+    font-size:12.5px;
+    color:#b9b2d6;
+    line-height:1.7;
+    padding:18px;
+  }
+  .photo-icon{ display:block; font-size:26px; margin-bottom:4px; }
+  .photo-remove{
+    position:absolute;
+    top:8px; right:8px;
+    width:26px; height:26px;
+    border-radius:50%;
+    border:none;
+    background:rgba(0,0,0,0.55);
+    color:#fff;
+    font-size:13px;
+    line-height:26px;
+    text-align:center;
+    padding:0;
+    cursor:pointer;
+  }
+  .photo-preview{
+    width:100%;
+    max-height:260px;
+    object-fit:cover;
+    display:block;
+  }
+  .photo-comment{
+    margin-top:8px;
+    font-size:13px;
+  }
+  .photo-comment[contenteditable]:empty::before{
+    content: attr(data-ph);
+    color:#b9b2d6;
+  }
+
+  .footer{
+    text-align:center;
+    padding:14px 20px 22px;
+    font-size:10.5px;
+    color:#b9b2d6;
+  }
+
+  .sleepy-icon{
+    position:absolute;
+    right:16px;
+    bottom:8px;
+    font-size:30px;
+    opacity:.9;
+  }
+
+  @media (max-width:380px){
+    .title{ font-size:22px; }
+    .name-value{ font-size:17px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <button id="saveBtn">📷 画像として保存</button>
+    <button id="resetBtn" class="secondary">🔄 内容をリセット</button>
+  </div>
+
+  <div class="theme-picker" id="themePicker">
+    <button type="button" class="swatch" data-theme="lavender" title="ゆめみるラベンダー" style="background:linear-gradient(135deg,#cdeaff,#e7ddff);"></button>
+    <button type="button" class="swatch" data-theme="pink" title="ピンクドリーム" style="background:linear-gradient(135deg,#ffe1ec,#ffd7e6);"></button>
+    <button type="button" class="swatch" data-theme="mint" title="みずたまミント" style="background:linear-gradient(135deg,#d4f5e4,#cdeee0);"></button>
+    <button type="button" class="swatch" data-theme="night" title="ナイトブルー" style="background:linear-gradient(135deg,#1b2a55,#32447e);"></button>
+  </div>
+
+  <div class="theme-picker-label">リサーチフィールドカラー</div>
+  <div class="theme-picker" id="themePickerField">
+    <button type="button" class="swatch" data-theme="wakakusa" title="ワカクサ本島（若草色）" style="background:linear-gradient(135deg,#6fa82e,#d9e86a);"></button>
+    <button type="button" class="swatch" data-theme="cyan" title="シアンの砂浜（シアン）" style="background:linear-gradient(135deg,#00acc1,#7fe8dc 70%,#f5e6a8);"></button>
+    <button type="button" class="swatch" data-theme="taupe" title="トープ洞窟（トープ）" style="background:linear-gradient(135deg,#4d4852,#8a7c68 65%,#b6a488);"></button>
+    <button type="button" class="swatch" data-theme="unohana" title="ウノハナ雪原（卯の花色）" style="background:linear-gradient(135deg,#eef6f7,#ffffff); box-shadow:0 0 0 2px #dfe6e7, 0 3px 8px rgba(120,100,180,0.25);"></button>
+    <button type="button" class="swatch" data-theme="lapis" title="ラピスラズリ湖畔（瑠璃色）" style="background:linear-gradient(135deg,#1f6f8a,#1eab94 50%,#7cf5c4);"></button>
+    <button type="button" class="swatch" data-theme="gold" title="ゴールド旧発電所（金色）" style="background:linear-gradient(135deg,#355a17,#6ea82e 45%,#fff3a0);"></button>
+    <button type="button" class="swatch" data-theme="amber" title="アンバー渓谷（琥珀色）" style="background:linear-gradient(135deg,#d67a1e,#f7cd8a);"></button>
+  </div>
+
+  <div class="hint">項目をタップ（クリック）すると直接書き込めます。上のカラーで配色を切り替え、書き終わったら「画像として保存」でPNGとして保存できます。</div>
+
+  <div id="card-scroll">
+  <div id="card">
+    <div class="header">
+      <div class="stars"></div>
+      <div class="moon"></div>
+      <span class="kicker">POKÉMON SLEEP</span>
+      <div class="title">自己紹介カード</div>
+      <div class="subtitle">Pokémon Sleep Self-Introduction Card</div>
+    </div>
+
+    <div class="nameplate">
+      <div class="avatar" id="avatarZone" tabindex="0" aria-label="アイコン画像を選択">
+        <span id="avatarEmoji">😴</span>
+        <img id="avatarPreview" class="avatar-preview" style="display:none;" alt="アイコン">
+        <span class="avatar-edit">✏️</span>
+      </div>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+      <div class="name-block">
+        <div class="field-label">NAME / 名前</div>
+        <div class="name-value" contenteditable="true" data-ph="ここに名前">リサーチャー📸</div>
+      </div>
+      <div class="badge">
+        <div class="num" contenteditable="true" data-ph="55">60</div>
+        <div class="lbl">リサーチ<br>ランク</div>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="body-grid">
+
+        <div class="col">
+          <div class="field">
+            <span class="field-label">性別</span>
+            <div class="val" contenteditable="true" data-ph="男 / 女 / その他">男・女・その他</div>
+          </div>
+          <div class="field">
+            <span class="field-label">寝顔数</span>
+            <div class="val" contenteditable="true" data-ph="例：143">143</div>
+          </div>
+          <div class="field">
+            <span class="field-label">フレンドコード</span>
+            <div class="val" contenteditable="true" data-ph="例：募集する時ポストします📮">募集する時ポストします📮</div>
+          </div>
+          <div class="field">
+            <span class="field-label">計測方法</span>
+            <div class="val" contenteditable="true" data-ph="スマホ / GO Plus+ / スマートウォッチ">スマホ・GO Plus+・スマートウォッチ</div>
+          </div>
+          <div class="field">
+            <span class="field-label">睡眠タイプ</span>
+            <div class="val" contenteditable="true" data-ph="一括睡眠 / 分割睡眠">一括睡眠・分割睡眠</div>
+          </div>
+          <div class="field">
+            <span class="field-label">課金スタイル</span>
+            <div class="val" contenteditable="true" data-ph="無課金 / プレパスのみ / プレパス+パック / 重課金">無課金・プレパスのみ・プレパス+パック・重課金</div>
+          </div>
+          <div class="field">
+            <span class="field-label">個体値厳選</span>
+            <div class="val" contenteditable="true" data-ph="こだわる / 少しこだわる / こだわらない">こだわる・少しこだわる・こだわらない</div>
+          </div>
+          <div class="field">
+            <span class="field-label">ポケモン歴</span>
+            <div class="val" contenteditable="true" data-ph="例：ダイパ〜現在">ダイパ〜現在</div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="section-title">お気に入り</div>
+          <div class="field">
+            <span class="field-label">推しポケモン</span>
+            <div class="val" contenteditable="true" data-ph="例：カビゴン💤">カビゴン💤</div>
+          </div>
+          <div class="field">
+            <span class="field-label">仲間にしたいポケモン</span>
+            <div class="val" contenteditable="true" data-ph="例：ゴンベ🫒">ゴンベ🫒</div>
+          </div>
+          <div class="field">
+            <span class="field-label">好きなフィールド</span>
+            <div class="val" contenteditable="true" data-ph="例：ワカクサ、シアン、トープ、ウノハナ、ラピス、ゴールド、アンバー">ワカクサ、シアン、トープ、ウノハナ、ラピス、ゴールド、アンバー</div>
+          </div>
+          <div class="field">
+            <span class="field-label">得意料理</span>
+            <div class="val" contenteditable="true" data-ph="例：ごちゃまぜジュース🥤">ごちゃまぜジュース🥤</div>
+          </div>
+
+          <div class="field photo-field">
+            <span class="field-label">お気に入り写真</span>
+            <div id="photoZone" class="photo-zone" tabindex="0">
+              <div id="photoPlaceholder" class="photo-placeholder">
+                <span class="photo-icon">🖼️</span>
+                クリックして画像を選択<br>
+                ドラッグ&ドロップ、またはCtrl+Vで貼り付け
+              </div>
+              <img id="photoPreview" class="photo-preview" style="display:none;" alt="お気に入り写真">
+              <button id="photoRemove" class="photo-remove" type="button" style="display:none;" aria-label="画像を削除">✕</button>
+            </div>
+            <input type="file" id="photoInput" accept="image/*" style="display:none;">
+            <div class="val photo-comment" contenteditable="true" data-ph="写真のコメント（任意）"></div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="section-title">フレンド交流</div>
+          <div class="field">
+            <span class="field-label">無言フォロー</span>
+            <div class="val" contenteditable="true" data-ph="OK / NG">OK👍️</div>
+          </div>
+          <div class="field">
+            <span class="field-label">呼びタメ</span>
+            <div class="val" contenteditable="true" data-ph="OK / NG">仲良くなればOK🫶</div>
+          </div>
+          <div class="field free-field">
+            <span class="field-label">今後の目標・モットー</span>
+            <div class="val" contenteditable="true" data-ph="例：おてぼを極めたい">エンジョイ勢🔥コツコツ頑張る💪</div>
+          </div>
+          <div class="field free-field">
+            <span class="field-label">フリースペース / ひとこと</span>
+            <div class="val" contenteditable="true" data-ph="自由にどうぞ！仲良くしてください〜">気軽にフォローしてください🙌<br>よろしくお願いします🤝</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <span class="sleepy-icon">💤</span>
+    <div class="footer">#ポケスリ自己紹介カード</div>
+  </div>
+  </div>
+
+<script>
+  const card = document.getElementById('card');
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const btn = document.getElementById('saveBtn');
+    const originalText = btn.textContent;
+
+    if (typeof html2canvas === 'undefined') {
+      alert('画像生成ライブラリの読み込みに失敗しました（通信環境やブラウザの制限が原因の可能性があります）。\n\nお手数ですが、画面のスクリーンショット機能で保存してください。');
+      return;
+    }
+
+    btn.textContent = '保存中…';
+
+    // hide UI-only controls so they don't appear in the exported image
+    const hideForExport = document.querySelectorAll('#photoRemove, .avatar-edit');
+    const prevDisplay = [];
+    hideForExport.forEach(el => { prevDisplay.push(el.style.display); el.style.display = 'none'; });
+
+    const restoreUI = () => {
+      hideForExport.forEach((el, i) => { el.style.display = prevDisplay[i]; });
+    };
+
+    try {
+      html2canvas(card, {scale: 3, backgroundColor: null, useCORS: true}).then(cardCanvas => {
+        // add a themed margin around the card at its FULL native size (no shrinking, stays readable)
+        const padding = 60;
+        const OUT_W = cardCanvas.width + padding * 2;
+        const OUT_H = cardCanvas.height + padding * 2;
+        const out = document.createElement('canvas');
+        out.width = OUT_W; out.height = OUT_H;
+        const ctx = out.getContext('2d');
+
+        // read current theme colors to build a matching background gradient
+        const cs = getComputedStyle(document.body);
+        const top = cs.getPropertyValue('--sky-top').trim() || '#cdeaff';
+        const mid = cs.getPropertyValue('--sky-mid').trim() || '#dff2ff';
+        const bottom = cs.getPropertyValue('--lavender').trim() || '#e7ddff';
+        const grad = ctx.createLinearGradient(0, 0, 0, OUT_H);
+        grad.addColorStop(0, top);
+        grad.addColorStop(0.45, mid);
+        grad.addColorStop(1, bottom);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, OUT_W, OUT_H);
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(80,60,120,0.35)';
+        ctx.shadowBlur = 40;
+        ctx.shadowOffsetY = 12;
+        ctx.drawImage(cardCanvas, padding, padding, cardCanvas.width, cardCanvas.height);
+        ctx.restore();
+
+        restoreUI();
+        const dataUrl = out.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'ポケスリ自己紹介カード.png';
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        btn.textContent = originalText;
+      }).catch((err) => {
+        restoreUI();
+        btn.textContent = originalText;
+        console.error('html2canvas error:', err);
+        alert('保存に失敗しました。\n\nこの端末・ブラウザでは画像生成がブロックされている可能性があります。お手数ですが、画面のスクリーンショット機能で保存してください。\n\n(詳細: ' + (err && err.message ? err.message : err) + ')');
+      });
+    } catch (err) {
+      restoreUI();
+      btn.textContent = originalText;
+      console.error('save button error:', err);
+      alert('保存に失敗しました。\n\nお手数ですが、画面のスクリーンショット機能で保存してください。\n\n(詳細: ' + (err && err.message ? err.message : err) + ')');
+    }
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if(!confirm('入力した内容をすべて空にしますか？')) return;
+    document.querySelectorAll('.val, .name-value, .badge .num').forEach(el => {
+      el.textContent = '';
+    });
+    clearPhoto();
+    clearAvatar();
+  });
+
+  // ---- photo paste zone ----
+  const photoZone = document.getElementById('photoZone');
+  const photoInput = document.getElementById('photoInput');
+  const photoPreview = document.getElementById('photoPreview');
+  const photoPlaceholder = document.getElementById('photoPlaceholder');
+  const photoRemove = document.getElementById('photoRemove');
+
+  function showPhoto(dataUrl){
+    photoPreview.src = dataUrl;
+    photoPreview.style.display = 'block';
+    photoPlaceholder.style.display = 'none';
+    photoRemove.style.display = 'block';
+  }
+
+  function clearPhoto(){
+    photoPreview.src = '';
+    photoPreview.style.display = 'none';
+    photoPlaceholder.style.display = 'block';
+    photoRemove.style.display = 'none';
+    photoInput.value = '';
+  }
+
+  function loadFile(file){
+    if(!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => showPhoto(e.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  // click to open file picker
+  photoZone.addEventListener('click', () => photoInput.click());
+  photoZone.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); photoInput.click(); }
+  });
+  photoInput.addEventListener('change', (e) => {
+    if(e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  // drag & drop
+  ['dragenter','dragover'].forEach(evt => {
+    photoZone.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      photoZone.classList.add('dragover');
+    });
+  });
+  ['dragleave','drop'].forEach(evt => {
+    photoZone.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      photoZone.classList.remove('dragover');
+    });
+  });
+  photoZone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) loadFile(file);
+  });
+
+  // paste from clipboard (Ctrl+V), works when zone is focused or globally
+  function handlePaste(e){
+    const items = (e.clipboardData || window.clipboardData).items;
+    if(!items) return;
+    for(const item of items){
+      if(item.type && item.type.startsWith('image/')){
+        const file = item.getAsFile();
+        loadFile(file);
+        e.preventDefault();
+        break;
+      }
+    }
+  }
+  photoZone.addEventListener('paste', handlePaste);
+  document.addEventListener('paste', handlePaste);
+
+  // remove photo
+  photoRemove.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearPhoto();
+  });
+
+  // ---- avatar icon (name plate) ----
+  const avatarZone = document.getElementById('avatarZone');
+  const avatarInput = document.getElementById('avatarInput');
+  const avatarEmoji = document.getElementById('avatarEmoji');
+  const avatarPreview = document.getElementById('avatarPreview');
+
+  avatarZone.addEventListener('click', () => avatarInput.click());
+  avatarZone.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); avatarInput.click(); }
+  });
+  avatarInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      avatarPreview.src = ev.target.result;
+      avatarPreview.style.display = 'block';
+      avatarEmoji.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function clearAvatar(){
+    avatarPreview.src = '';
+    avatarPreview.style.display = 'none';
+    avatarEmoji.style.display = 'block';
+    avatarInput.value = '';
+  }
+
+  // ---- theme picker ----
+  const allSwatches = document.querySelectorAll('#themePicker .swatch, #themePickerField .swatch');
+  allSwatches.forEach(sw => {
+    sw.addEventListener('click', () => {
+      const theme = sw.dataset.theme;
+      if(theme === 'lavender'){
+        document.body.removeAttribute('data-theme');
+      } else {
+        document.body.setAttribute('data-theme', theme);
+      }
+      allSwatches.forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+    });
+  });
+  document.querySelector('#themePicker [data-theme="lavender"]').classList.add('active');
+</script>
+
+</body>
+</html>
