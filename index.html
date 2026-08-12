@@ -12,8 +12,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%98%B4%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-  onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';document.head.appendChild(s);"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <style>
   :root{
     --sky-top: #cdeaff;
@@ -358,14 +359,14 @@
   }
   .name-block{ flex:1; min-width:0; }
   .field-label{
-    font-size:11.5px;
+    font-size:10.5px;
     font-weight:700;
     color:var(--pink-deep);
     letter-spacing:.05em;
   }
   .name-value{
     font-family:'Zen Maru Gothic', sans-serif;
-    font-size:22px;
+    font-size:20px;
     font-weight:700;
     color:var(--ink);
     margin-top:2px;
@@ -379,7 +380,7 @@
     border-radius:14px;
     padding:6px 12px;
   }
-  .badge .num{ font-weight:800; font-size:19px; color:var(--pink-deep); outline:none; }
+  .badge .num{ font-weight:800; font-size:18px; color:var(--pink-deep); outline:none; }
   .badge .lbl{ font-size:9.5px; color:var(--plum); }
 
   /* ---- body ---- */
@@ -407,14 +408,13 @@
     border-radius:14px;
     padding:10px 14px;
   }
-  .field .field-label{ margin-bottom:4px; display:block; }
+  .field .field-label{ margin-bottom:3px; display:block; }
   .field .val{
-    font-size:16px;
+    font-size:14.5px;
     font-weight:500;
     color:var(--ink);
     outline:none;
     min-height:20px;
-    line-height:1.5;
   }
   .val[contenteditable]:empty::before{
     content: attr(data-ph);
@@ -425,8 +425,8 @@
     border-bottom:2px dashed var(--pink-deep);
   }
 
-  .choice-row{ font-size:14.5px; }
-  .choice-row .val{ font-size:14.5px; }
+  .choice-row{ font-size:13px; }
+  .choice-row .val{ font-size:13px; }
 
   .two-col{ display:flex; gap:12px; }
   .two-col .field{ flex:1; }
@@ -435,7 +435,7 @@
   .section-title{
     font-family:'Zen Maru Gothic',sans-serif;
     font-weight:700;
-    font-size:15px;
+    font-size:13.5px;
     color:var(--plum);
     display:flex;
     align-items:center;
@@ -456,7 +456,7 @@
   .photo-zone{
     position:relative;
     margin-top:6px;
-    min-height:140px;
+    aspect-ratio: 4 / 3;
     border-radius:14px;
     border:2px dashed #cabcec;
     background:#fff;
@@ -472,6 +472,10 @@
     border-color:var(--pink-deep);
     background:#fff6fa;
   }
+  .photo-zone.has-photo{
+    cursor:default;
+    background:linear-gradient(135deg, var(--field-bg, #faf8ff), var(--line, #e7e2f5));
+  }
   .photo-placeholder{
     font-size:12.5px;
     color:#b9b2d6;
@@ -479,9 +483,9 @@
     padding:18px;
   }
   .photo-icon{ display:block; font-size:26px; margin-bottom:4px; }
-  .photo-remove{
+  .photo-remove, .photo-edit{
     position:absolute;
-    top:8px; right:8px;
+    top:8px;
     width:26px; height:26px;
     border-radius:50%;
     border:none;
@@ -493,11 +497,14 @@
     padding:0;
     cursor:pointer;
   }
+  .photo-remove{ right:8px; }
+  .photo-edit{ right:42px; font-size:12px; }
   .photo-preview{
     width:100%;
-    max-height:260px;
-    object-fit:cover;
+    height:100%;
+    object-fit:contain;
     display:block;
+    pointer-events:none;
   }
   .photo-comment{
     margin-top:8px;
@@ -521,6 +528,122 @@
     bottom:8px;
     font-size:30px;
     opacity:.9;
+  }
+
+  /* ---- 保存用モーダル ---- */
+  #saveModal{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(40,30,70,0.6);
+  }
+  #saveModal.open{ display:flex; }
+  .save-modal-box{
+    background:var(--card-bg);
+    border-radius:20px;
+    padding:16px;
+    width:100%;
+    max-width:420px;
+    max-height:90vh;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    box-shadow:0 12px 40px rgba(60,40,100,0.35);
+  }
+  #savePreview{
+    width:100%;
+    border-radius:12px;
+    display:block;
+    /* iOSの長押しメニュー（"写真"に追加）を有効にする */
+    -webkit-touch-callout:default;
+  }
+  .save-modal-msg{
+    font-size:13px;
+    line-height:1.6;
+    color:var(--plum);
+    text-align:center;
+  }
+  .save-modal-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    width:100%;
+  }
+  .save-modal-actions button{
+    font-family:'M PLUS Rounded 1c', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    border:none;
+    border-radius:999px;
+    padding:10px 20px;
+    cursor:pointer;
+    background:var(--pink-deep);
+    color:#fff;
+    box-shadow:0 4px 0 #c94472;
+    transition:transform .08s ease;
+  }
+  .save-modal-actions button:active{ transform:translateY(3px); box-shadow:0 1px 0 #c94472; }
+  .save-modal-actions button.secondary{
+    background:#fff;
+    color:var(--pink-deep);
+    box-shadow:0 4px 0 var(--line);
+    border:2px solid var(--pink-deep);
+  }
+
+  /* ---- 写真の切り取りモーダル ---- */
+  #cropModal{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(40,30,70,0.6);
+  }
+  #cropModal.open{ display:flex; }
+  .crop-modal-box{
+    background:var(--card-bg);
+    border-radius:20px;
+    padding:16px;
+    width:100%;
+    max-width:420px;
+    max-height:90vh;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    box-shadow:0 12px 40px rgba(60,40,100,0.35);
+  }
+  .crop-modal-title{
+    font-family:'Zen Maru Gothic', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--plum);
+    align-self:flex-start;
+  }
+  .crop-image-wrap{
+    width:100%;
+    max-height:55vh;
+    overflow:hidden;
+    border-radius:12px;
+    background:#eee;
+  }
+  .crop-image-wrap img{ max-width:100%; display:block; }
+  .crop-modal-msg{
+    font-size:12px;
+    line-height:1.6;
+    color:var(--plum);
+    text-align:center;
+    opacity:.85;
   }
 
   @media (max-width:380px){
@@ -649,6 +772,7 @@
                 ドラッグ&ドロップ、またはCtrl+Vで貼り付け
               </div>
               <img id="photoPreview" class="photo-preview" style="display:none;" alt="お気に入り写真">
+              <button id="photoEdit" class="photo-edit" type="button" style="display:none;" aria-label="切り取る">✂️</button>
               <button id="photoRemove" class="photo-remove" type="button" style="display:none;" aria-label="画像を削除">✕</button>
             </div>
             <input type="file" id="photoInput" accept="image/*" style="display:none;">
@@ -684,125 +808,177 @@
   </div>
   </div>
 
+  <div id="saveModal" role="dialog" aria-modal="true" aria-label="カードの保存">
+    <div class="save-modal-box">
+      <img id="savePreview" alt="作成した自己紹介カード">
+      <p class="save-modal-msg" id="saveModalMsg"></p>
+      <div class="save-modal-actions">
+        <button type="button" id="saveShareBtn">📲 保存する</button>
+        <button type="button" id="saveCloseBtn" class="secondary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cropModal" role="dialog" aria-modal="true" aria-label="写真の切り取り">
+    <div class="crop-modal-box">
+      <div class="crop-modal-title">✂️ 写真を切り取る</div>
+      <div class="crop-image-wrap">
+        <img id="cropTargetImage" alt="切り取る写真">
+      </div>
+      <p class="crop-modal-msg">ドラッグで位置調整、指2本またはホイールでズームできます</p>
+      <div class="save-modal-actions">
+        <button type="button" id="cropApplyBtn">✂️ この形で使う</button>
+        <button type="button" id="cropResetBtn" class="secondary">🔄 元画像に戻す</button>
+        <button type="button" id="cropCancelBtn" class="secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const card = document.getElementById('card');
 
-  function openImageInNewTab(blob) {
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (!win) {
-      alert('保存できませんでした。ポップアップがブロックされている可能性があります。ブラウザの設定でポップアップを許可してから、もう一度お試しください。');
-      return;
-    }
-    alert('新しいタブに画像を開きました。画像を長押しして「写真に追加」または「画像を保存」を選んでください。');
-  }
+  // 共有先アプリでの文字化けを避けるため、ファイル名はASCIIにする
+  const FILE_NAME = 'pokesleep-card.png';
 
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    const btn = document.getElementById('saveBtn');
-    const originalText = btn.textContent;
+  // iPadOSはMacを名乗るため、タッチポイント数を併用して判定する
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+    || (/Mac/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 
-    if (typeof html2canvas === 'undefined') {
-      alert('画像生成ライブラリの読み込みに失敗しました（通信環境やブラウザの制限が原因の可能性があります）。\n\nお手数ですが、画面のスクリーンショット機能で保存してください。');
-      return;
-    }
+  // Safariはcanvasの面積上限を超えると無言で失敗する（真っ白な画像やnullのblobになる）。
+  // 上限はiOSの方がかなり低いので、予算内に収まる最大のscaleを選ぶ。
+  const pickScale = (cssWidth, cssHeight) => {
+    const budget = isIOS ? 5e6 : 16e6;
+    const area = cssWidth * cssHeight;
+    return [3, 2.5, 2, 1.5, 1].find(s => area * s * s <= budget) || 1;
+  };
 
-    btn.textContent = '保存中…';
+  const canvasToBlob = canvas => new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      blob ? resolve(blob) : reject(new Error('canvas.toBlob returned null'));
+    }, 'image/png');
+  });
 
-    // hide UI-only controls so they don't appear in the exported image
-    const hideForExport = document.querySelectorAll('#photoRemove, .avatar-edit');
+  // カードをテーマ色の背景に載せて描画し、PNGのBlobを返す
+  const renderCardBlob = async () => {
+    // 操作用のUIが書き出し画像に写り込まないよう隠す
+    const hideForExport = document.querySelectorAll('#photoRemove, #photoEdit, .avatar-edit');
     const prevDisplay = [];
     hideForExport.forEach(el => { prevDisplay.push(el.style.display); el.style.display = 'none'; });
 
-    const restoreUI = () => {
+    try {
+      const scale = pickScale(card.offsetWidth, card.offsetHeight);
+      const cardCanvas = await html2canvas(card, {scale, backgroundColor: null, useCORS: true});
+
+      // カードの周囲にテーマ色の余白を足す（カード自体は等倍のままなので文字が潰れない）
+      const padding = Math.round(20 * scale);
+      const OUT_W = cardCanvas.width + padding * 2;
+      const OUT_H = cardCanvas.height + padding * 2;
+      const out = document.createElement('canvas');
+      out.width = OUT_W; out.height = OUT_H;
+      const ctx = out.getContext('2d');
+
+      // 現在のテーマ色を読み取って背景グラデーションを作る
+      const cs = getComputedStyle(document.body);
+      const top = cs.getPropertyValue('--sky-top').trim() || '#cdeaff';
+      const mid = cs.getPropertyValue('--sky-mid').trim() || '#dff2ff';
+      const bottom = cs.getPropertyValue('--lavender').trim() || '#e7ddff';
+      const grad = ctx.createLinearGradient(0, 0, 0, OUT_H);
+      grad.addColorStop(0, top);
+      grad.addColorStop(0.45, mid);
+      grad.addColorStop(1, bottom);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, OUT_W, OUT_H);
+
+      ctx.save();
+      // 影のサイズもscaleに追従させ、見た目を一定に保つ
+      ctx.shadowColor = 'rgba(80,60,120,0.35)';
+      ctx.shadowBlur = 40 * (scale / 3);
+      ctx.shadowOffsetY = 12 * (scale / 3);
+      ctx.drawImage(cardCanvas, padding, padding, cardCanvas.width, cardCanvas.height);
+      ctx.restore();
+
+      return await canvasToBlob(out);
+    } finally {
       hideForExport.forEach((el, i) => { el.style.display = prevDisplay[i]; });
-    };
+    }
+  };
+
+  const saveModal = document.getElementById('saveModal');
+  const savePreview = document.getElementById('savePreview');
+  const saveModalMsg = document.getElementById('saveModalMsg');
+  const saveShareBtn = document.getElementById('saveShareBtn');
+  let savedFile = null;
+  let savedUrl = null;
+
+  const closeSaveModal = () => {
+    saveModal.classList.remove('open');
+    savePreview.removeAttribute('src');
+    if (savedUrl) { URL.revokeObjectURL(savedUrl); savedUrl = null; }
+    savedFile = null;
+  };
+
+  const openSaveModal = (file, canShareFile) => {
+    savedFile = file;
+    savedUrl = URL.createObjectURL(file);
+    savePreview.src = savedUrl;
+    if (canShareFile) {
+      saveShareBtn.hidden = false;
+      saveModalMsg.textContent = '「保存する」から「画像を保存」を選ぶと写真に保存できます。うまくいかないときは画像を長押しして「"写真"に追加」を選んでください。';
+    } else {
+      saveShareBtn.hidden = true;
+      saveModalMsg.textContent = '画像を長押しして「"写真"に追加」を選ぶと保存できます。';
+    }
+    saveModal.classList.add('open');
+  };
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveBtn');
+    const originalText = btn.textContent;
+    btn.textContent = '保存中…';
+    btn.disabled = true;
 
     try {
-      html2canvas(card, {scale: 3, backgroundColor: null, useCORS: true}).then(cardCanvas => {
-        // add a themed margin around the card at its FULL native size (no shrinking, stays readable)
-        const padding = 60;
-        const OUT_W = cardCanvas.width + padding * 2;
-        const OUT_H = cardCanvas.height + padding * 2;
-        const out = document.createElement('canvas');
-        out.width = OUT_W; out.height = OUT_H;
-        const ctx = out.getContext('2d');
+      const blob = await renderCardBlob();
+      const file = new File([blob], FILE_NAME, {type: 'image/png'});
+      const canShareFile = !!(navigator.canShare && navigator.canShare({files: [file]}));
 
-        // read current theme colors to build a matching background gradient
-        const cs = getComputedStyle(document.body);
-        const top = cs.getPropertyValue('--sky-top').trim() || '#cdeaff';
-        const mid = cs.getPropertyValue('--sky-mid').trim() || '#dff2ff';
-        const bottom = cs.getPropertyValue('--lavender').trim() || '#e7ddff';
-        const grad = ctx.createLinearGradient(0, 0, 0, OUT_H);
-        grad.addColorStop(0, top);
-        grad.addColorStop(0.45, mid);
-        grad.addColorStop(1, bottom);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, OUT_W, OUT_H);
-
-        ctx.save();
-        ctx.shadowColor = 'rgba(80,60,120,0.35)';
-        ctx.shadowBlur = 40;
-        ctx.shadowOffsetY = 12;
-        ctx.drawImage(cardCanvas, padding, padding, cardCanvas.width, cardCanvas.height);
-        ctx.restore();
-
-        restoreUI();
-
-        out.toBlob((blob) => {
-          if (!blob) {
-            btn.textContent = originalText;
-            alert('画像の生成に失敗しました。もう一度お試しください。');
-            return;
-          }
-          const fileName = 'ポケスリ自己紹介カード.png';
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-          // Android / desktop: a normal download link works great and is the
-          // least surprising option, so use it directly — no share sheet detour.
-          if (!isIOS) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.download = fileName;
-            link.href = url;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 4000);
-            btn.textContent = originalText;
-            return;
-          }
-
-          // iOS Safari / in-app browsers (X, LINE, etc.) don't support <a download>,
-          // so use the native share sheet — it lets you save straight to Photos.
-          const file = new File([blob], fileName, { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: fileName })
-              .then(() => { btn.textContent = originalText; })
-              .catch(() => {
-                // user cancelled the share sheet, or share failed — fall back to new tab
-                openImageInNewTab(blob);
-                btn.textContent = originalText;
-              });
-            return;
-          }
-
-          // iOS fallback with no share support: open image in a new tab so it can be
-          // saved via long-press → "Add to Photos"
-          openImageInNewTab(blob);
-          btn.textContent = originalText;
-        }, 'image/png');
-      }).catch((err) => {
-        restoreUI();
-        btn.textContent = originalText;
-        console.error('html2canvas error:', err);
-        alert('保存に失敗しました。\n\nこの端末・ブラウザでは画像生成がブロックされている可能性があります。お手数ですが、画面のスクリーンショット機能で保存してください。\n\n(詳細: ' + (err && err.message ? err.message : err) + ')');
-      });
-    } catch (err) {
-      restoreUI();
+      if (isIOS) {
+        // navigator.share()は直前のタップ操作を必要とするが、
+        // 上の描画処理でその有効期限が切れてしまうため、モーダル内の2回目のタップに委ねる
+        openSaveModal(file, canShareFile);
+      } else {
+        // data: URLは巨大な文字列になりダウンロードに失敗することがあるためBlobを使う
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = FILE_NAME;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('保存に失敗しました。もう一度お試しください。');
+    } finally {
       btn.textContent = originalText;
-      console.error('save button error:', err);
-      alert('保存に失敗しました。\n\nお手数ですが、画面のスクリーンショット機能で保存してください。\n\n(詳細: ' + (err && err.message ? err.message : err) + ')');
+      btn.disabled = false;
     }
+  });
+
+  saveShareBtn.addEventListener('click', async () => {
+    if (!savedFile) return;
+    try {
+      await navigator.share({files: [savedFile], title: 'ポケスリ自己紹介カード'});
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // 共有シートがキャンセルされただけなので何もしない
+      console.error(e);
+      saveModalMsg.textContent = '共有に失敗しました。画像を長押しして「"写真"に追加」を選んでください。';
+    }
+  });
+
+  document.getElementById('saveCloseBtn').addEventListener('click', closeSaveModal);
+  saveModal.addEventListener('click', e => {
+    // 背景（オーバーレイ部分）のタップだけで閉じる
+    if (e.target === saveModal) closeSaveModal();
   });
 
   document.getElementById('resetBtn').addEventListener('click', () => {
@@ -820,12 +996,16 @@
   const photoPreview = document.getElementById('photoPreview');
   const photoPlaceholder = document.getElementById('photoPlaceholder');
   const photoRemove = document.getElementById('photoRemove');
+  const photoEdit = document.getElementById('photoEdit');
+  let originalPhotoDataUrl = null; // uncropped source, so re-editing never loses quality
 
   function showPhoto(dataUrl){
     photoPreview.src = dataUrl;
     photoPreview.style.display = 'block';
     photoPlaceholder.style.display = 'none';
     photoRemove.style.display = 'block';
+    photoEdit.style.display = 'block';
+    photoZone.classList.add('has-photo');
   }
 
   function clearPhoto(){
@@ -833,15 +1013,90 @@
     photoPreview.style.display = 'none';
     photoPlaceholder.style.display = 'block';
     photoRemove.style.display = 'none';
+    photoEdit.style.display = 'none';
+    photoZone.classList.remove('has-photo');
     photoInput.value = '';
+    originalPhotoDataUrl = null;
   }
 
   function loadFile(file){
     if(!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = (e) => showPhoto(e.target.result);
+    reader.onload = (e) => {
+      // show the whole image right away (auto letterboxed, nothing cropped off);
+      // cropping is available afterwards via the ✂️ button if wanted
+      originalPhotoDataUrl = e.target.result;
+      showPhoto(originalPhotoDataUrl);
+    };
     reader.readAsDataURL(file);
   }
+
+  // ---- photo crop modal (optional manual adjustment) ----
+  const cropModal = document.getElementById('cropModal');
+  const cropTargetImage = document.getElementById('cropTargetImage');
+  const cropApplyBtn = document.getElementById('cropApplyBtn');
+  const cropResetBtn = document.getElementById('cropResetBtn');
+  const cropCancelBtn = document.getElementById('cropCancelBtn');
+  let photoCropper = null;
+
+  function openCropModal(dataUrl){
+    cropTargetImage.src = dataUrl;
+    cropModal.classList.add('open');
+    if (photoCropper) { photoCropper.destroy(); photoCropper = null; }
+    // wait a tick so the modal/image has real layout size before Cropper measures it
+    requestAnimationFrame(() => {
+      photoCropper = new Cropper(cropTargetImage, {
+        aspectRatio: 4 / 3,
+        viewMode: 1,
+        background: false,
+        autoCropArea: 1,
+        responsive: true,
+      });
+    });
+  }
+
+  function closeCropModal(){
+    cropModal.classList.remove('open');
+    if (photoCropper) { photoCropper.destroy(); photoCropper = null; }
+    cropTargetImage.removeAttribute('src');
+  }
+
+  photoEdit.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (originalPhotoDataUrl) openCropModal(originalPhotoDataUrl);
+  });
+
+  cropApplyBtn.addEventListener('click', () => {
+    if (!photoCropper) return;
+    const canvas = photoCropper.getCroppedCanvas({
+      width: 800,
+      height: 600,
+      imageSmoothingQuality: 'high',
+    });
+    if (!canvas) {
+      alert('切り取りに失敗しました。もう一度お試しください。');
+      return;
+    }
+    // crop from the ORIGINAL each time, so repeated edits never lose quality —
+    // only the on-screen preview shows the cropped version
+    showPhoto(canvas.toDataURL('image/jpeg', 0.92));
+    closeCropModal();
+  });
+
+  cropResetBtn.addEventListener('click', () => {
+    if (!originalPhotoDataUrl) return;
+    // restore the full, uncropped image (with automatic letterboxing)
+    showPhoto(originalPhotoDataUrl);
+    closeCropModal();
+  });
+
+  cropCancelBtn.addEventListener('click', () => {
+    closeCropModal();
+  });
+
+  cropModal.addEventListener('click', e => {
+    if (e.target === cropModal) closeCropModal();
+  });
 
   // click to open file picker
   photoZone.addEventListener('click', () => photoInput.click());
